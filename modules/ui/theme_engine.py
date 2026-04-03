@@ -138,12 +138,12 @@ class ThemeEngine:
         app.header_frame.configure(bg=c["header"])
         app.title_label.configure(bg=c["header"], fg=c["title_color"])
 
-        # Theme Button
+        # Theme Button – unsichtbar im Header (kein Rahmen, kein Kontrast)
         btn_text = "☀️ LIGHT MODE" if self.dark_mode else "🌙  DARK MODE"
         app.theme_btn.configure(
             text=btn_text,
-            bg=c["btn_secondary"], fg=c["btn_fg"],
-            activebackground=c["act_secondary"],
+            bg=c["header"], fg=c["sub_lbl"],
+            activebackground=c["header"],
             bd=0, highlightthickness=0,
         )
 
