@@ -20,7 +20,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.CR_PAT }}
 
       - name: Build and Push
         uses: docker/build-push-action@v5
@@ -28,3 +28,5 @@ jobs:
           context: .
           push: true
           tags: ghcr.io/modi-224412/videoqualityanalyzer:latest
+          labels: |
+            org.opencontainers.image.source=https://github.com/Modi-224412/VideoQualityAnalyzerPro
