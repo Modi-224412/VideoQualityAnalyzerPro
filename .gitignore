@@ -40,5 +40,8 @@ desktop.ini
 # macOS
 .DS_Store
 
+# Lokale Hilfsskripte
+create_clean_zip.bat
+
 # Claude Code
 .claude/
