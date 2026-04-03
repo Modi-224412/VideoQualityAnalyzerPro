@@ -22,6 +22,11 @@ Verfügbar als **Desktop-App** (Windows/Linux) und als **Web-Version** für NAS/
 
 - Vergleichsmodus: Original vs. Encoded nebeneinander
 - Solo-Modus: Einzelvideo analysieren (kein Original nötig)
+- **Mehrfachanalyse (Batch-Modus):** Mehrere Video-Paare als Queue anlegen und sequenziell abarbeiten
+  - Beliebig viele Jobs hinzufügen, einzeln konfigurieren (Metriken, Modus, Subsampling, GPU)
+  - Batch-Import: N Originale + N Encoded gleichzeitig auswählen — automatisch nach Dateiname gepaart
+  - Jobs per Drag & Drop (↑/↓) umsortieren, einzeln bearbeiten oder entfernen
+  - GPU-Auswahl direkt im Mehrfachanalyse-Tab, auf alle Jobs anwendbar
 - Integrierter Video-Player mit synchronem Vergleich
 - HTML-Report Export (Dark & Light Mode)
 - VMAF-Graph als PNG
