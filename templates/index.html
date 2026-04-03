@@ -526,6 +526,73 @@
       margin-right: 4px;
     }
 
+    /* ── Tab Bar ── */
+    .tab-bar {
+      background: var(--header);
+      border-bottom: 1px solid #111;
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      gap: 2px;
+      flex-shrink: 0;
+    }
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--dim);
+      padding: 10px 18px;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: color 0.15s, border-color 0.15s;
+      white-space: nowrap;
+    }
+    .tab-btn:hover { color: var(--fg); }
+    .tab-btn.active { color: var(--green); border-bottom-color: var(--green); }
+
+    /* ── Queue Table ── */
+    .queue-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .queue-table th {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: var(--dim);
+      text-align: left;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .queue-table td {
+      padding: 7px 10px;
+      border-bottom: 1px solid var(--border);
+      font-family: 'Consolas', monospace;
+      font-size: 11px;
+      max-width: 180px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .queue-table tr:last-child td { border-bottom: none; }
+    .queue-table tr.q-selected td { background: rgba(46,204,113,0.1); }
+    .queue-table tbody tr:hover td { background: var(--entry); cursor: pointer; }
+    .q-status-waiting { color: var(--dim); }
+    .q-status-running { color: var(--blue); }
+    .q-status-done    { color: var(--green); }
+    .q-status-failed  { color: var(--red); }
+
+    /* ── Queue Toolbar ── */
+    .queue-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+
     /* ── Mobile Layout ── */
     @media (max-width: 768px) {
       body {
@@ -593,10 +660,16 @@
   </div>
 </header>
 
+<!-- ── Tab Bar ── -->
+<div class="tab-bar">
+  <button class="tab-btn active" id="tab-analyse" onclick="switchTab('analyse')">🔬 ANALYSE</button>
+  <button class="tab-btn" id="tab-queue" onclick="switchTab('queue')">📋 MEHRFACHANALYSE</button>
+</div>
+
 <div class="main">
 
-  <!-- ── Left Panel ── -->
-  <div class="left">
+  <!-- ── Analyse Panel ── -->
+  <div class="left" id="panel-analyse">
 
     <!-- File Card -->
     <div class="card">
@@ -674,7 +747,50 @@
       <button class="btn-action btn-red"    id="btn-stop"  onclick="stopAnalysis()" disabled>🛑 STOP</button>
     </div>
 
-  </div>
+  </div><!-- /panel-analyse -->
+
+  <!-- ── Queue Panel ── -->
+  <div class="left" id="panel-queue" style="display:none;">
+
+    <!-- Toolbar -->
+    <div class="card">
+      <div class="queue-toolbar">
+        <span style="font-size:9px;font-weight:700;letter-spacing:0.1em;margin-right:4px;">MEHRFACHANALYSE</span>
+        <button class="btn btn-green"     onclick="queueAddJob()">+ Hinzufügen</button>
+        <button class="btn btn-secondary" onclick="queueEditJob()">✎ Bearbeiten</button>
+        <button class="btn btn-secondary" onclick="queueRemoveJob()">✕ Entfernen</button>
+        <button class="btn btn-secondary" onclick="queueMoveUp()">↑</button>
+        <button class="btn btn-secondary" onclick="queueMoveDown()">↓</button>
+        <button class="btn btn-red"       onclick="queueClear()">🗑 Leeren</button>
+        <span id="q-count" style="font-size:9px;color:var(--dim);margin-left:auto;">0 Jobs</span>
+      </div>
+    </div>
+
+    <!-- Job List -->
+    <div class="card" style="padding:6px 0;overflow-x:auto;">
+      <table class="queue-table" id="queue-table">
+        <thead>
+          <tr>
+            <th style="width:30px;">#</th>
+            <th>Encoded</th>
+            <th>Original</th>
+            <th style="width:72px;">Modus</th>
+            <th style="width:100px;">Status</th>
+          </tr>
+        </thead>
+        <tbody id="queue-body">
+          <tr><td colspan="5" style="text-align:center;color:var(--dim);padding:22px 10px;">Keine Jobs – klicke „+ Hinzufügen"</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Start / Stop -->
+    <div class="action-row">
+      <button class="btn-action btn-green" id="btn-queue-start" onclick="queueStart()">🚀 MEHRFACHANALYSE STARTEN</button>
+      <button class="btn-action btn-red"   id="btn-queue-stop"  onclick="queueStop()" disabled>🛑 STOP</button>
+    </div>
+
+  </div><!-- /panel-queue -->
 
   <!-- ── Right Panel ── -->
   <div class="right">
@@ -800,6 +916,71 @@
       <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:4px;border-top:1px solid var(--border);">
         <div id="s-save-msg" style="font-size:12px;color:var(--green);align-self:center;opacity:0;transition:opacity 0.4s;"></div>
         <button class="btn" style="background:var(--blue);" onclick="saveSettings()">💾 SPEICHERN</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Job Dialog Modal ── -->
+<div class="modal-overlay" id="job-dialog-modal" onclick="if(event.target===this)closeJobDialog()">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-header">
+      <span class="modal-title" id="job-dialog-title">JOB HINZUFÜGEN</span>
+      <button class="btn btn-secondary" onclick="closeJobDialog()">✕ Schließen</button>
+    </div>
+    <div style="padding:18px;overflow-y:auto;max-height:72vh;display:flex;flex-direction:column;gap:14px;">
+
+      <!-- Solo Toggle -->
+      <div style="display:flex;align-items:center;gap:8px;">
+        <input type="checkbox" id="jd-solo" style="width:16px;height:16px;cursor:pointer;" onchange="jdToggleSolo()">
+        <label for="jd-solo" style="font-size:12px;cursor:pointer;color:var(--fg);">Solo-Scan (kein Original nötig)</label>
+      </div>
+
+      <!-- Encoded -->
+      <div>
+        <label class="file-label">TEST VIDEO (ENCODED)</label>
+        <div class="file-input-row">
+          <input class="file-input" type="text" id="jd-enco" placeholder="Encoded-Pfad">
+          <button class="btn btn-browse" onclick="openBrowserFor('jd-enco')">📂</button>
+        </div>
+      </div>
+
+      <!-- Original -->
+      <div id="jd-orig-row">
+        <label class="file-label">REFERENCE VIDEO (ORIGINAL)</label>
+        <div class="file-input-row">
+          <input class="file-input" type="text" id="jd-orig" placeholder="Original-Pfad">
+          <button class="btn btn-browse" onclick="openBrowserFor('jd-orig')">📂</button>
+        </div>
+      </div>
+
+      <!-- Metriken -->
+      <div>
+        <div class="card-title" style="margin-bottom:8px;">METRIKEN</div>
+        <div class="metrics-row" id="jd-metrics-row"></div>
+      </div>
+
+      <!-- Optionen -->
+      <div>
+        <div class="card-title" style="margin-bottom:8px;">OPTIONEN</div>
+        <div class="options-row">
+          <span class="opt-label">VMAF SUBSAMPLING:</span>
+          <select class="opt-select" id="jd-subsample">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="4">4</option>
+            <option value="8">8</option>
+          </select>
+          <span class="opt-sep">|</span>
+          <span class="opt-label">ARTEFAKT-FRAMES:</span>
+          <input class="opt-input" type="number" id="jd-art-frames" value="1000" min="0" step="100">
+        </div>
+      </div>
+
+      <!-- Buttons -->
+      <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:8px;border-top:1px solid var(--border);">
+        <button class="btn btn-secondary" onclick="closeJobDialog()">Abbrechen</button>
+        <button class="btn btn-green" id="jd-save-btn" onclick="saveJobDialog()">✓ Hinzufügen</button>
       </div>
     </div>
   </div>
@@ -1166,7 +1347,10 @@ async function loadDir(path) {
       } else {
         item.innerHTML = `<span class="item-icon">🎬</span><span class="item-name">${e.name}</span><span class="item-size">${e.size}</span>`;
         item.onclick = () => {
-          document.getElementById(browserTarget === 'orig' ? 'orig-path' : 'enco-path').value = e.path;
+          const elId = browserTarget === 'orig' ? 'orig-path' :
+                       browserTarget === 'enco' ? 'enco-path' :
+                       browserTarget;
+          document.getElementById(elId).value = e.path;
           closeBrowser();
         };
       }
@@ -1251,6 +1435,273 @@ async function saveSettings() {
   } catch(e) {
     alert('Fehler beim Speichern: ' + e);
   }
+}
+
+// ── Tab Switching ──────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  const isQueue = tab === 'queue';
+  document.getElementById('panel-analyse').style.display = isQueue ? 'none'  : 'flex';
+  document.getElementById('panel-queue').style.display   = isQueue ? 'flex'  : 'none';
+  document.getElementById('tab-analyse').classList.toggle('active', !isQueue);
+  document.getElementById('tab-queue').classList.toggle('active',    isQueue);
+  if (isQueue) refreshQueueList();
+}
+
+// ── Queue State ────────────────────────────────────────────────────────────────
+let queueJobs        = [];
+let selectedJobId    = null;
+let queuePollInt     = null;
+let jdActiveMetrics  = new Set(ALL_METRICS);
+let jdEditingId      = null;
+
+function setQueueButtons(running) {
+  document.getElementById('btn-queue-start').disabled = running;
+  document.getElementById('btn-queue-stop').disabled  = !running;
+}
+
+// ── Queue List Refresh ─────────────────────────────────────────────────────────
+async function refreshQueueList() {
+  try {
+    const d = await (await fetch('/api/queue')).json();
+    queueJobs = d.jobs;
+    renderQueueList(d.jobs, d.summary);
+    const isRunning = d.summary.running > 0;
+    const isPaused  = d.paused;
+    setQueueButtons(isRunning || (!isPaused && d.summary.waiting > 0));
+  } catch {}
+}
+
+function renderQueueList(jobs, summary) {
+  const tbody = document.getElementById('queue-body');
+  tbody.innerHTML = '';
+
+  if (!jobs.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--dim);padding:22px 10px;">Keine Jobs – klicke „+ Hinzufügen"</td></tr>';
+    document.getElementById('q-count').textContent = '0 Jobs';
+    return;
+  }
+
+  const statusLabel = { waiting: '⏳ Wartend', running: '⚙️ Läuft...', done: '✅ Fertig', failed: '❌ Fehler' };
+
+  jobs.forEach((job, i) => {
+    const tr = document.createElement('tr');
+    if (job.id === selectedJobId) tr.classList.add('q-selected');
+
+    tr.onclick = () => {
+      selectedJobId = job.id;
+      tbody.querySelectorAll('tr').forEach(r => r.classList.remove('q-selected'));
+      tr.classList.add('q-selected');
+    };
+    tr.ondblclick = () => {
+      if (job.status === 'done' && job.report_url) { window.open(job.report_url, '_blank'); return; }
+      selectedJobId = job.id; queueEditJob();
+    };
+
+    const enco = job.enco_path.split('/').pop();
+    const orig = job.solo_mode ? '—' : (job.orig_path || '').split('/').pop();
+    const mode = job.solo_mode ? 'Solo' : 'Vergleich';
+
+    tr.innerHTML = `
+      <td style="color:var(--dim);">${i + 1}</td>
+      <td title="${job.enco_path}">${enco}</td>
+      <td title="${job.orig_path || ''}">${orig}</td>
+      <td style="font-size:10px;">${mode}</td>
+      <td class="q-status-${job.status}" style="font-size:10px;">${statusLabel[job.status] || job.status}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  const total = jobs.length;
+  const done  = summary.done + summary.failed;
+  document.getElementById('q-count').textContent =
+    `${total} Job${total !== 1 ? 's' : ''} · ${done} abgeschlossen`;
+}
+
+// ── Queue Start / Stop ─────────────────────────────────────────────────────────
+async function queueStart() {
+  if (!queueJobs.some(j => j.status === 'waiting')) {
+    alert('Keine wartenden Jobs vorhanden.'); return;
+  }
+  try {
+    await fetch('/api/queue/start', { method: 'POST' });
+    setQueueButtons(true);
+    startLogStream();
+    startQueuePolling();
+  } catch(e) { alert('Fehler: ' + e); }
+}
+
+async function queueStop() {
+  try { await fetch('/api/queue/stop', { method: 'POST' }); } catch {}
+}
+
+function startQueuePolling() {
+  if (queuePollInt) return;
+  queuePollInt = setInterval(async () => {
+    await refreshQueueList();
+    const anyActive = queueJobs.some(j => j.status === 'running' || j.status === 'waiting');
+    const paused    = !queueJobs.some(j => j.status === 'running');
+    if (!anyActive || (paused && !queueJobs.some(j => j.status === 'running'))) {
+      // Check via API whether paused
+      try {
+        const d = await (await fetch('/api/queue')).json();
+        if (d.paused && d.summary.running === 0) {
+          clearInterval(queuePollInt); queuePollInt = null;
+          stopLogStream();
+          setQueueButtons(false);
+        }
+      } catch {}
+    }
+  }, 1000);
+}
+
+// ── Queue CRUD ─────────────────────────────────────────────────────────────────
+function queueAddJob() {
+  jdEditingId     = null;
+  jdActiveMetrics = new Set(ALL_METRICS);
+  document.getElementById('jd-enco').value          = '';
+  document.getElementById('jd-orig').value          = '';
+  document.getElementById('jd-solo').checked        = false;
+  document.getElementById('jd-orig-row').style.display = '';
+  document.getElementById('jd-subsample').value     = '1';
+  document.getElementById('jd-art-frames').value    = '1000';
+  document.getElementById('job-dialog-title').textContent = 'JOB HINZUFÜGEN';
+  document.getElementById('jd-save-btn').textContent      = '✓ Hinzufügen';
+  buildJobDialogMetrics();
+  document.getElementById('job-dialog-modal').classList.add('open');
+}
+
+function queueEditJob() {
+  const job = queueJobs.find(j => j.id === selectedJobId);
+  if (!job) { alert('Bitte zuerst einen Job auswählen.'); return; }
+  if (job.status !== 'waiting') { alert('Nur wartende Jobs können bearbeitet werden.'); return; }
+  jdEditingId     = job.id;
+  jdActiveMetrics = new Set(job.metrics);
+  document.getElementById('jd-enco').value          = job.enco_path;
+  document.getElementById('jd-orig').value          = job.orig_path || '';
+  document.getElementById('jd-solo').checked        = job.solo_mode;
+  document.getElementById('jd-orig-row').style.display = job.solo_mode ? 'none' : '';
+  document.getElementById('jd-subsample').value     = String(job.subsample);
+  document.getElementById('jd-art-frames').value    = String(job.art_frames);
+  document.getElementById('job-dialog-title').textContent = 'JOB BEARBEITEN';
+  document.getElementById('jd-save-btn').textContent      = '✓ Speichern';
+  buildJobDialogMetrics();
+  document.getElementById('job-dialog-modal').classList.add('open');
+}
+
+async function queueRemoveJob() {
+  if (!selectedJobId) { alert('Bitte zuerst einen Job auswählen.'); return; }
+  try {
+    const r = await fetch('/api/queue/' + selectedJobId, { method: 'DELETE' });
+    if (!r.ok) { alert((await r.json()).error || 'Fehler beim Entfernen.'); return; }
+    selectedJobId = null;
+    refreshQueueList();
+  } catch(e) { alert('Fehler: ' + e); }
+}
+
+async function queueClear() {
+  await fetch('/api/queue', { method: 'DELETE' });
+  refreshQueueList();
+}
+
+async function queueMoveUp() {
+  const idx = queueJobs.findIndex(j => j.id === selectedJobId);
+  if (idx <= 0) return;
+  const ids = queueJobs.map(j => j.id);
+  [ids[idx - 1], ids[idx]] = [ids[idx], ids[idx - 1]];
+  try {
+    await fetch('/api/queue/reorder', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ order: ids }),
+    });
+    refreshQueueList();
+  } catch {}
+}
+
+async function queueMoveDown() {
+  const idx = queueJobs.findIndex(j => j.id === selectedJobId);
+  if (idx < 0 || idx >= queueJobs.length - 1) return;
+  const ids = queueJobs.map(j => j.id);
+  [ids[idx + 1], ids[idx]] = [ids[idx], ids[idx + 1]];
+  try {
+    await fetch('/api/queue/reorder', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ order: ids }),
+    });
+    refreshQueueList();
+  } catch {}
+}
+
+// ── Job Dialog ─────────────────────────────────────────────────────────────────
+function buildJobDialogMetrics() {
+  const row = document.getElementById('jd-metrics-row');
+  row.innerHTML = '';
+  ALL_METRICS.forEach(m => {
+    const on    = jdActiveMetrics.has(m);
+    const badge = document.createElement('div');
+    badge.className = 'metric-badge';
+    badge.innerHTML = `<span class="metric-dot${on ? '' : ' off'}" id="jddot-${m}">●</span><span class="metric-name${on ? '' : ' off'}">${m}</span>`;
+    badge.onclick = () => {
+      if (jdActiveMetrics.has(m)) {
+        if (jdActiveMetrics.size <= 1) return;
+        jdActiveMetrics.delete(m);
+        badge.querySelector('.metric-dot').classList.add('off');
+        badge.querySelector('.metric-name').classList.add('off');
+      } else {
+        jdActiveMetrics.add(m);
+        badge.querySelector('.metric-dot').classList.remove('off');
+        badge.querySelector('.metric-name').classList.remove('off');
+      }
+    };
+    row.appendChild(badge);
+  });
+}
+
+function jdToggleSolo() {
+  document.getElementById('jd-orig-row').style.display =
+    document.getElementById('jd-solo').checked ? 'none' : '';
+}
+
+function closeJobDialog() {
+  document.getElementById('job-dialog-modal').classList.remove('open');
+}
+
+async function saveJobDialog() {
+  const enco = document.getElementById('jd-enco').value.trim();
+  const orig = document.getElementById('jd-orig').value.trim();
+  const solo = document.getElementById('jd-solo').checked;
+  if (!enco) { alert('Bitte Encoded-Pfad angeben.'); return; }
+  if (!solo && !orig) { alert('Bitte Original-Pfad angeben oder Solo-Scan aktivieren.'); return; }
+
+  if (jdEditingId !== null) {
+    await fetch('/api/queue/' + jdEditingId, { method: 'DELETE' });
+  }
+
+  try {
+    const r = await fetch('/api/queue/add', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        enco_path:  enco,
+        orig_path:  solo ? enco : orig,
+        solo_mode:  solo,
+        metrics:    [...jdActiveMetrics],
+        subsample:  parseInt(document.getElementById('jd-subsample').value) || 1,
+        art_frames: parseInt(document.getElementById('jd-art-frames').value) || 1000,
+        offset_sec: 0.0,
+        dark_mode:  !document.body.classList.contains('light'),
+      }),
+    });
+    if (!r.ok) { alert((await r.json()).error || r.statusText); return; }
+    closeJobDialog();
+    refreshQueueList();
+  } catch(e) { alert('Fehler: ' + e); }
+}
+
+// ── Extended Browser (supports arbitrary element IDs as target) ────────────────
+function openBrowserFor(targetId) {
+  browserTarget = targetId;
+  document.getElementById('browser-modal').classList.add('open');
+  loadDir('/data');
 }
 
 // ── Init ───────────────────────────────────────────────────────────────────────

@@ -148,6 +148,8 @@ _q_lock: threading.Lock   = threading.Lock()
 _q_counter: int           = 0
 _q_done_event             = threading.Event()
 _q_done_event.set()                   # Initial: kein Job läuft
+_q_paused:  bool          = True      # Queue startet pausiert – expliziter Start nötig
+_q_pause_event            = threading.Event()  # gesetzt = läuft, leer = pausiert
 
 
 def _next_qid() -> int:
@@ -158,9 +160,13 @@ def _next_qid() -> int:
 
 def _queue_worker():
     """Hintergrund-Thread: arbeitet Mehrfachanalysen-Jobs nacheinander ab."""
+    global _q_paused
     while True:
         # Warten bis kein Job mehr läuft
         _q_done_event.wait()
+
+        # Warten bis Queue nicht pausiert
+        _q_pause_event.wait()
 
         # Nächsten wartenden Job suchen
         next_job = None
@@ -171,7 +177,10 @@ def _queue_worker():
                     break
 
         if next_job is None:
-            time.sleep(1)
+            # Keine Jobs mehr → auto-pausieren
+            _q_pause_event.clear()
+            _q_paused = True
+            time.sleep(0.5)
             continue
 
         # Sicherheitscheck: manueller Job könnte noch laufen
@@ -790,7 +799,7 @@ async def api_queue_list():
         jobs = list(_q_jobs)
     summary = {s: sum(1 for j in jobs if j["status"] == s)
                for s in ("waiting", "running", "done", "failed")}
-    return {"jobs": jobs, "summary": summary}
+    return {"jobs": jobs, "summary": summary, "paused": _q_paused}
 
 
 @api.get("/queue/{job_id}/results", summary="Ergebnisse eines Jobs abrufen", tags=["Mehrfachanalyse"],
@@ -847,6 +856,50 @@ async def api_queue_clear():
         _q_jobs[:] = [j for j in _q_jobs if j["status"] in ("waiting", "running")]
         cleared = before - len(_q_jobs)
     return {"cleared": cleared}
+
+
+@api.post("/queue/start", summary="Mehrfachanalyse starten", tags=["Mehrfachanalyse"],
+          responses={200: {"content": {"application/json": {"example": {"status": "started"}}}}})
+async def api_queue_start():
+    """Startet die Mehrfachanalyse – arbeitet alle wartenden Jobs nacheinander ab."""
+    global _q_paused
+    _q_paused = False
+    _q_pause_event.set()
+    return {"status": "started"}
+
+
+@api.post("/queue/stop", summary="Mehrfachanalyse stoppen", tags=["Mehrfachanalyse"],
+          responses={200: {"content": {"application/json": {"example": {"status": "stopped"}}}}})
+async def api_queue_stop():
+    """Pausiert die Mehrfachanalyse und bricht den aktuell laufenden Job ab."""
+    global _q_paused
+    _q_paused = True
+    _q_pause_event.clear()
+    if job["running"]:
+        runner.stop()
+    return {"status": "stopped"}
+
+
+class ReorderRequest(BaseModel):
+    order: List[int] = Field(..., description="Neue Reihenfolge als Liste von Job-IDs")
+
+
+@api.post("/queue/reorder", summary="Reihenfolge der wartenden Jobs ändern", tags=["Mehrfachanalyse"],
+          responses={200: {"content": {"application/json": {"example": {"status": "reordered"}}}}})
+async def api_queue_reorder(req: ReorderRequest):
+    """Ändert die Reihenfolge der wartenden Jobs. Nur wartende Jobs werden umsortiert."""
+    with _q_lock:
+        waiting = [j for j in _q_jobs if j["status"] == "waiting"]
+        others  = [j for j in _q_jobs if j["status"] != "waiting"]
+        id_map  = {j["id"]: j for j in waiting}
+        reordered = [id_map[jid] for jid in req.order if jid in id_map]
+        # Jobs die nicht in der Order-Liste waren anhängen
+        listed_ids = set(req.order)
+        for j in waiting:
+            if j["id"] not in listed_ids:
+                reordered.append(j)
+        _q_jobs[:] = others + reordered
+    return {"status": "reordered"}
 
 
 @api.get("/settings", summary="Einstellungen laden", tags=["System"],
