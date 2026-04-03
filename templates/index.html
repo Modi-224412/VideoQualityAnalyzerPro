@@ -1,0 +1,1262 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Video Quality Analyzer PRO</title>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="icon" type="image/png" href="/icon.png">
+  <style>
+    /* ── Dark Mode (Standard) ── */
+    :root {
+      --bg:           #1e1e1e;
+      --card:         #2d2d2d;
+      --header:       #181818;
+      --entry:        #3d3d3d;
+      --border:       #444;
+      --console-bg:   #121212;
+      --console-fg:   #00ff00;
+      --fg:           #f0f0f0;
+      --dim:          #888;
+      --green:        #2ecc71;
+      --green-act:    #219150;
+      --blue:         #3498db;
+      --red:          #e74c3c;
+      --red-act:      #a93226;
+      --purple:       #8e44ad;
+      --yellow:       #f39c12;
+      --btn-sec:      #444;
+      --btn-sec-act:  #555;
+      --title-color:  #2ecc71;
+    }
+
+    /* ── Light Mode ── */
+    body.light {
+      --bg:           #f0f2f5;
+      --card:         #ffffff;
+      --header:       #ffffff;
+      --entry:        #e9ecef;
+      --border:       #dcdde1;
+      --console-bg:   #ffffff;
+      --console-fg:   #2c3e50;
+      --fg:           #2c3e50;
+      --dim:          #888;
+      --green:        #27ae60;
+      --green-act:    #1e8449;
+      --blue:         #2980b9;
+      --red:          #c0392b;
+      --red-act:      #a93226;
+      --purple:       #8e44ad;
+      --yellow:       #f39c12;
+      --btn-sec:      #e0e0e0;
+      --btn-sec-act:  #d5d8dc;
+      --title-color:  #2c3e50;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 13px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--header);
+      padding: 0 20px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+      border-bottom: 1px solid #111;
+    }
+    .header-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--title-color);
+      letter-spacing: 0.04em;
+      flex: 1;
+    }
+    .theme-btn {
+      background: var(--btn-sec);
+      color: var(--fg);
+      border: none;
+      padding: 5px 14px;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      border-radius: 1px;
+    }
+    .theme-btn:hover { background: var(--btn-sec-act); }
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .gpu-badge {
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 3px;
+      background: var(--btn-sec);
+      color: var(--dim);
+      display: none;
+    }
+    .gpu-badge.active { background: #1a3a1a; color: var(--green); }
+
+    /* ── Main: 2 Spalten ── */
+    .main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ── Left Panel ── */
+    .left {
+      flex: 0 0 42%;
+      min-width: 360px;
+      overflow-y: auto;
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex-shrink: 0;
+      border-right: 1px solid #111;
+    }
+    .left::-webkit-scrollbar { width: 6px; }
+    .left::-webkit-scrollbar-track { background: var(--bg); }
+    .left::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ── Cards (wie Desktop) ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 12px 16px;
+    }
+    .card-title {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--fg);
+      margin-bottom: 10px;
+    }
+
+    /* ── Input Rows ── */
+    .file-row { margin-bottom: 8px; }
+    .file-label {
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--fg);
+      margin-bottom: 4px;
+      display: block;
+    }
+    .file-input-row { display: flex; gap: 6px; align-items: center; }
+    .file-input {
+      flex: 1;
+      background: var(--entry);
+      border: none;
+      color: var(--fg);
+      padding: 5px 8px;
+      font-family: 'Consolas', monospace;
+      font-size: 11px;
+      outline: none;
+      border-radius: 1px;
+    }
+    .file-input:focus { outline: 1px solid var(--green); }
+    .file-input::placeholder { color: #666; }
+
+    /* ── Buttons ── */
+    .btn {
+      border: none;
+      padding: 5px 12px;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      border-radius: 1px;
+      transition: background 0.1s;
+      white-space: nowrap;
+    }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-secondary { background: var(--btn-sec); color: var(--fg); }
+    .btn-secondary:hover:not(:disabled) { background: var(--btn-sec-act); }
+    .btn-green  { background: var(--green);  color: #fff; }
+    .btn-green:hover:not(:disabled)  { background: var(--green-act); }
+    .btn-red    { background: var(--red);    color: #fff; }
+    .btn-red:hover:not(:disabled)    { background: var(--red-act); }
+    .btn-blue   { background: var(--blue);   color: #fff; }
+    .btn-blue:hover:not(:disabled)   { background: #21618c; }
+    .btn-purple { background: var(--purple); color: #fff; }
+    .btn-purple:hover:not(:disabled) { background: #7d3c98; }
+    .btn-yellow { background: var(--yellow); color: #fff; }
+    .btn-yellow:hover:not(:disabled) { background: #d35400; }
+    .btn-browse { background: var(--card); color: var(--fg); }
+    .btn-browse:hover { background: var(--entry); }
+
+    /* Solo Row */
+    .solo-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid #3a3a3a;
+    }
+    .solo-hint { font-size: 9px; color: var(--dim); }
+
+    /* ── Metric Badges (wie Desktop) ── */
+    .metrics-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .metric-badge {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      background: var(--entry);
+      padding: 5px 10px;
+      border-radius: 2px;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.1s;
+    }
+    .metric-badge:hover { background: #4a4a4a; }
+    .metric-dot {
+      font-size: 10px;
+      color: var(--green);
+      transition: color 0.15s;
+    }
+    .metric-dot.off { color: #8B0000; }
+    .metric-name {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      color: var(--fg);
+    }
+    .metric-name.off { color: var(--dim); }
+
+    /* ── Options Row ── */
+    .options-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .opt-label { font-size: 9px; color: var(--dim); white-space: nowrap; }
+    .opt-select, .opt-input {
+      background: var(--entry);
+      border: none;
+      color: var(--fg);
+      padding: 4px 8px;
+      font-size: 11px;
+      font-family: 'Consolas', monospace;
+      outline: none;
+      border-radius: 1px;
+      width: 60px;
+    }
+    .opt-select { width: auto; cursor: pointer; }
+    .opt-input:focus, .opt-select:focus { outline: 1px solid var(--green); }
+    input[type=number]::-webkit-outer-spin-button,
+    input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type=number] { -moz-appearance: textfield; }
+    .opt-sep { color: var(--border); font-size: 16px; }
+
+    /* ── Action Buttons ── */
+    .action-row {
+      display: flex;
+      gap: 6px;
+    }
+    .btn-action {
+      flex: 1;
+      padding: 10px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      border: none;
+      cursor: pointer;
+      border-radius: 1px;
+      transition: background 0.1s;
+    }
+    .btn-action:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Quick Access */
+    .access-row { display: flex; gap: 6px; flex-wrap: wrap; }
+
+    /* ── Right Panel ── */
+    .right {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Progress ── */
+    .progress-area {
+      background: var(--bg);
+      padding: 14px 16px 10px 16px;
+      flex-shrink: 0;
+      border-bottom: 1px solid #111;
+    }
+    .progress-track {
+      background: var(--entry);
+      height: 22px;
+      border-radius: 2px;
+      overflow: hidden;
+      margin-bottom: 6px;
+    }
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--green);
+      transition: width 0.4s ease, background 0.3s;
+    }
+    .progress-fill.blue   { background: var(--blue); }
+    .progress-fill.red    { background: var(--red); width: 100% !important; }
+    .progress-fill.done   { background: var(--green); }
+    .progress-fill.pulse  {
+      width: 100% !important;
+      background: linear-gradient(90deg, var(--blue) 0%, #5dade2 50%, var(--blue) 100%);
+      background-size: 200%;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%   { background-position: 200% center; }
+      100% { background-position: 0%   center; }
+    }
+    .progress-label {
+      font-size: 9px;
+      color: var(--dim);
+      text-align: center;
+    }
+
+    /* ── Console ── */
+    .console-header {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 5px 14px;
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .console-title {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: var(--fg);
+      flex: 1;
+    }
+    .console-area {
+      flex: 1;
+      background: var(--console-bg);
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 12px;
+      padding: 10px 14px;
+      overflow-y: auto;
+      color: var(--console-fg);
+      line-height: 1.5;
+    }
+    .console-area::-webkit-scrollbar { width: 6px; }
+    .console-area::-webkit-scrollbar-track { background: var(--console-bg); }
+    .console-area::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+    .log-line { white-space: pre-wrap; word-break: break-all; }
+    .log-step    { color: #3498db; font-weight: bold; }
+    .log-success { color: #2ecc71; }
+    .log-warn    { color: #f39c12; }
+    .log-error   { color: #e74c3c; }
+
+    /* ── Player ── */
+    .player-row {
+      display: flex;
+      gap: 6px;
+    }
+    .player-modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+    }
+    .player-modal-overlay.open { display: flex; }
+    .player-modal {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      width: 92vw;
+      max-width: 1400px;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .player-modal-header {
+      background: var(--header);
+      padding: 8px 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .player-modal-title { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; flex: 1; }
+    .player-videos {
+      display: flex;
+      gap: 6px;
+      padding: 10px;
+      flex: 1;
+      overflow: hidden;
+      background: #000;
+    }
+    .player-videos video {
+      flex: 1;
+      max-height: 75vh;
+      background: #000;
+      outline: none;
+      border-radius: 2px;
+    }
+    .player-label {
+      font-size: 10px;
+      color: var(--dim);
+      text-align: center;
+      padding: 4px 10px;
+      background: var(--bg);
+      flex-shrink: 0;
+    }
+    .player-unsupported {
+      color: #f39c12;
+      font-size: 11px;
+      padding: 4px 14px;
+      background: var(--bg);
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+      display: none;
+    }
+
+    /* ── File Browser Modal ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      width: min(580px, calc(100vw - 24px));
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .modal-header {
+      background: var(--header);
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .modal-title { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; flex: 1; }
+    .modal-path {
+      font-size: 10px;
+      font-family: 'Consolas', monospace;
+      color: var(--dim);
+      padding: 6px 14px;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .modal-list {
+      overflow-y: auto;
+      flex: 1;
+    }
+    .modal-list::-webkit-scrollbar { width: 6px; }
+    .modal-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    .browser-item {
+      display: flex;
+      align-items: center;
+      padding: 7px 14px;
+      cursor: pointer;
+      gap: 8px;
+      border-bottom: 1px solid #333;
+      transition: background 0.1s;
+    }
+    .browser-item:hover { background: var(--entry); }
+    .browser-item.dir  { color: var(--fg); }
+    .browser-item.file { color: var(--green); }
+    .browser-item .item-icon { font-size: 13px; flex-shrink: 0; }
+    .browser-item .item-name { flex: 1; font-size: 12px; font-family: 'Consolas', monospace; }
+    .browser-item .item-size { font-size: 10px; color: var(--dim); flex-shrink: 0; }
+
+    /* ── Results Bar ── */
+    .results-bar {
+      background: var(--card);
+      border-top: 1px solid var(--border);
+      padding: 8px 14px;
+      display: none;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .results-bar.visible { display: flex; }
+    .results-label {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: var(--dim);
+      margin-right: 4px;
+    }
+
+    /* ── Mobile Layout ── */
+    @media (max-width: 768px) {
+      body {
+        height: auto;
+        min-height: 100vh;
+        overflow-y: auto;
+      }
+      header {
+        height: auto;
+        padding: 10px 14px;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .header-title {
+        font-size: 14px;
+      }
+      .main {
+        flex-direction: column;
+        overflow-y: auto;
+        height: auto;
+      }
+      .left {
+        flex: none;
+        min-width: unset;
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid #111;
+        overflow-y: visible;
+      }
+      .right {
+        flex: none;
+        width: 100%;
+        height: auto;
+        overflow: visible;
+        display: flex;
+        flex-direction: column;
+      }
+      .console-area {
+        flex: none;
+        height: 300px;
+        overflow-y: auto;
+      }
+      .player-row {
+        flex-direction: column;
+      }
+      .player-row .btn {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header>
+  <div class="header-title">
+    <img src="/icon.png" style="height:28px;width:28px;vertical-align:middle;margin-right:10px;border-radius:6px;">
+    VIDEO QUALITY ANALYZER PRO
+  </div>
+  <div class="header-right">
+    <span class="gpu-badge" id="gpu-badge">CPU</span>
+    <span style="font-size:10px;color:var(--dim);">Web Edition v1.0</span>
+    <button class="theme-btn" id="theme-btn" onclick="toggleTheme()">☀️ LIGHT MODE</button>
+    <button class="theme-btn" onclick="openSettings()" title="Einstellungen">⚙️ EINSTELLUNGEN</button>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- ── Left Panel ── -->
+  <div class="left">
+
+    <!-- File Card -->
+    <div class="card">
+      <div class="card-title">Reference Video (Original)</div>
+      <div class="file-row">
+        <div class="file-input-row">
+          <input class="file-input" type="text" id="orig-path" placeholder="Original">
+          <button class="btn btn-browse" onclick="openBrowser('orig')">📂</button>
+        </div>
+      </div>
+      <div class="card-title" style="margin-top:8px;">Test Video (Encoded)</div>
+      <div class="file-row" style="margin-bottom:0">
+        <div class="file-input-row">
+          <input class="file-input" type="text" id="enco-path" placeholder="Encoded">
+          <button class="btn btn-browse" onclick="openBrowser('enco')">📂</button>
+        </div>
+      </div>
+      <div class="solo-row">
+        <span class="solo-hint">Kein Original? →</span>
+        <button class="btn btn-purple" id="btn-solo" onclick="startAnalysis(true)">🔍 SOLO-SCAN (referenzlos)</button>
+        <span class="solo-hint">– misst Bitrate, Artefakte, Frame-Drops &amp; Audio</span>
+      </div>
+    </div>
+
+    <!-- Metrics Card -->
+    <div class="card">
+      <div class="card-title">Active Metrics Overview</div>
+      <div class="metrics-row" id="metrics-row"></div>
+    </div>
+
+    <!-- Options Card -->
+    <div class="card">
+      <div class="card-title">Options</div>
+      <div class="options-row">
+        <span class="opt-label">⚡ GPU:</span>
+        <span id="gpu-opt-label" style="font-size:11px;color:var(--dim);">erkenne...</span>
+        <span class="opt-sep">|</span>
+        <span class="opt-label">VMAF SUBSAMPLING:</span>
+        <select class="opt-select" id="subsample">
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="4">4</option>
+          <option value="8">8</option>
+        </select>
+        <span class="opt-sep">|</span>
+        <span class="opt-label">ARTEFAKT-FRAMES:</span>
+        <input class="opt-input" type="number" id="art-frames" value="1000" min="0" step="100">
+        <span class="opt-label">(0 = alle)</span>
+      </div>
+    </div>
+
+    <!-- Quick Access Card -->
+    <div class="card">
+      <div class="card-title">Quick Access</div>
+      <div class="access-row">
+        <button class="btn btn-secondary" onclick="openLatestReport()">📂 Reports</button>
+        <button class="btn btn-secondary" onclick="openScreenshots()">📸 Screenshots</button>
+        <button class="btn btn-secondary" onclick="openHeatmapModal()">🔥 Heatmaps</button>
+      </div>
+    </div>
+
+    <!-- Player Card -->
+    <div class="card">
+      <div class="card-title">Individual Player Control</div>
+      <div class="player-row">
+        <button class="btn btn-secondary" style="flex:1" onclick="openPlayer('orig')">▶ PLAY REFERENCE</button>
+        <button class="btn btn-secondary" style="flex:1" onclick="openPlayer('enco')">▶ PLAY ENCODED</button>
+        <button class="btn btn-blue"      style="flex:1" onclick="openPlayer('both')">📺 COMPARISON PLAYER</button>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="action-row">
+      <button class="btn-action btn-green"  id="btn-start" onclick="startAnalysis(false)">🚀 START ANALYSIS</button>
+      <button class="btn-action btn-red"    id="btn-stop"  onclick="stopAnalysis()" disabled>🛑 STOP</button>
+    </div>
+
+  </div>
+
+  <!-- ── Right Panel ── -->
+  <div class="right">
+
+    <!-- Progress -->
+    <div class="progress-area">
+      <div class="progress-track">
+        <div class="progress-fill" id="progress-fill"></div>
+      </div>
+      <div class="progress-label" id="progress-label">Engine Status: Idle</div>
+    </div>
+
+    <!-- Console Header -->
+    <div class="console-header">
+      <span class="console-title">ENGINE LOG</span>
+    </div>
+
+    <!-- Console -->
+    <div class="console-area" id="console"></div>
+
+    <!-- Results Bar -->
+    <div class="results-bar" id="results-bar">
+      <span class="results-label">RESULTS</span>
+      <button class="btn btn-green"  onclick="openReport()">📊 Report öffnen</button>
+      <button class="btn btn-blue"   onclick="openGraph()">📈 VMAF-Graph</button>
+      <button class="btn btn-secondary" onclick="openHeatmapModal()">🔥 Heatmaps</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Player Modal ── -->
+<div class="player-modal-overlay" id="player-modal">
+  <div class="player-modal">
+    <div class="player-modal-header">
+      <span class="player-modal-title" id="player-title">PLAYER</span>
+      <button class="btn btn-secondary" onclick="closePlayer()">✕ Schließen</button>
+    </div>
+    <div class="player-videos" id="player-videos"></div>
+    <div class="player-label" id="player-label"></div>
+    <div class="player-unsupported" id="player-unsupported">
+      ⚠️ Dieses Format wird möglicherweise nicht vom Browser unterstützt (z.B. HEVC/MKV). Versuche MP4/H.264 für beste Kompatibilität.
+    </div>
+  </div>
+</div>
+
+<!-- ── File Browser Modal ── -->
+<!-- ── Files Modal (Heatmap / Screenshots) ── -->
+<div class="modal-overlay" id="files-modal" onclick="if(event.target===this)closeFilesModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="files-modal-title">DATEIEN</span>
+      <button class="btn btn-secondary" onclick="closeFilesModal()">✕ Schließen</button>
+    </div>
+    <div class="modal-list" id="files-modal-list"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="browser-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">DATEI AUSWÄHLEN</span>
+      <button class="btn btn-secondary" onclick="closeBrowser()">✕ Schließen</button>
+    </div>
+    <div class="modal-path" id="browser-path">/data</div>
+    <div class="modal-list" id="browser-list"></div>
+  </div>
+</div>
+
+<!-- ── Settings Modal ── -->
+<div class="modal-overlay" id="settings-modal" onclick="if(event.target===this)closeSettings()">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-header">
+      <span class="modal-title">⚙️ EINSTELLUNGEN</span>
+      <button class="btn btn-secondary" onclick="closeSettings()">✕ Schließen</button>
+    </div>
+    <div style="padding:18px;overflow-y:auto;max-height:70vh;display:flex;flex-direction:column;gap:20px;">
+
+      <!-- Pfad-Mapping -->
+      <div>
+        <div class="card-title" style="margin-bottom:10px;">📁 Pfad-Mapping (für externe Tools wie StaxRip)</div>
+        <div style="color:var(--dim);font-size:11px;margin-bottom:12px;line-height:1.5;">
+          Wenn du die API von Windows aus steuerst (z.B. StaxRip), werden die Windows-Pfade
+          automatisch in Docker-Pfade umgewandelt.<br>
+          Beispiel: <code style="background:var(--entry);padding:1px 5px;border-radius:3px;">Z:\filme\encoded.mp4</code>
+          → <code style="background:var(--entry);padding:1px 5px;border-radius:3px;">/data/filme/encoded.mp4</code>
+        </div>
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:8px 12px;align-items:center;">
+          <label style="font-size:12px;color:var(--dim);white-space:nowrap;">Windows-Pfad (von):</label>
+          <input class="opt-input" id="s-path-from" type="text" placeholder='z.B. Z:\ oder \\NAS\downloads\' style="width:100%;padding:6px 10px;">
+          <label style="font-size:12px;color:var(--dim);white-space:nowrap;">Docker-Pfad (nach):</label>
+          <input class="opt-input" id="s-path-to" type="text" placeholder="/data/" style="width:100%;padding:6px 10px;">
+        </div>
+      </div>
+
+      <!-- Standard-Metriken -->
+      <div>
+        <div class="card-title" style="margin-bottom:10px;">📊 Standard-Metriken für Queue-Jobs</div>
+        <div id="s-metrics-row" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+      </div>
+
+      <!-- Standard-Optionen -->
+      <div>
+        <div class="card-title" style="margin-bottom:10px;">🔧 Standard-Optionen</div>
+        <div style="display:grid;grid-template-columns:auto 1fr auto 1fr;gap:8px 14px;align-items:center;">
+          <label style="font-size:12px;color:var(--dim);">VMAF Subsampling:</label>
+          <select class="opt-select" id="s-subsample" style="width:100%;">
+            <option value="1">1 (genaueste)</option>
+            <option value="2">2</option>
+            <option value="4">4</option>
+            <option value="8">8 (schnellste)</option>
+          </select>
+          <label style="font-size:12px;color:var(--dim);">Artefakt-Frames:</label>
+          <input class="opt-input" id="s-art-frames" type="number" min="1" step="100" style="width:100%;padding:6px 10px;">
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:10px;">
+          <label style="font-size:12px;color:var(--dim);">Dark Mode im Report:</label>
+          <input type="checkbox" id="s-dark-mode" style="width:16px;height:16px;cursor:pointer;">
+        </div>
+      </div>
+
+      <!-- Speichern -->
+      <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:4px;border-top:1px solid var(--border);">
+        <div id="s-save-msg" style="font-size:12px;color:var(--green);align-self:center;opacity:0;transition:opacity 0.4s;"></div>
+        <button class="btn" style="background:var(--blue);" onclick="saveSettings()">💾 SPEICHERN</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────────
+const ALL_METRICS  = ["VMAF","SSIM","PSNR","BITRATE","ARTIFACTS","FRAME DROPS","AUDIO"];
+let activeMetrics  = new Set(ALL_METRICS);
+let reportUrl      = null;
+let eventSource    = null;
+let pollInterval   = null;
+
+// ── Metrics Badges (wie Desktop) ──────────────────────────────────────────────
+function buildMetrics() {
+  const row = document.getElementById('metrics-row');
+  ALL_METRICS.forEach(m => {
+    const badge = document.createElement('div');
+    badge.className = 'metric-badge';
+    badge.innerHTML = `<span class="metric-dot" id="dot-${m}">●</span><span class="metric-name" id="name-${m}">${m}</span>`;
+    badge.title = 'Klicken zum An-/Abschalten';
+    badge.onclick = () => toggleMetric(m);
+    row.appendChild(badge);
+  });
+}
+
+function toggleMetric(m) {
+  if (activeMetrics.has(m)) {
+    if (activeMetrics.size <= 1) return;
+    activeMetrics.delete(m);
+    document.getElementById('dot-'  + m).classList.add('off');
+    document.getElementById('name-' + m).classList.add('off');
+  } else {
+    activeMetrics.add(m);
+    document.getElementById('dot-'  + m).classList.remove('off');
+    document.getElementById('name-' + m).classList.remove('off');
+  }
+}
+
+// ── Console ────────────────────────────────────────────────────────────────────
+function logLine(msg) {
+  const el   = document.getElementById('console');
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  if      (msg.includes('[STEP]'))                          line.classList.add('log-step');
+  else if (msg.includes('[SUCCESS]') || msg.includes('✅')) line.classList.add('log-success');
+  else if (msg.includes('[WARN]')    || msg.includes('⚠'))  line.classList.add('log-warn');
+  else if (msg.includes('[ERROR]')   || msg.includes('❌')) line.classList.add('log-error');
+  line.textContent = msg;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+  while (el.children.length > 800) el.removeChild(el.firstChild);
+}
+
+function clearConsole() {
+  document.getElementById('console').innerHTML = '';
+}
+
+function copyLog() {
+  const text = [...document.getElementById('console').children]
+    .map(l => l.textContent).join('\n');
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copy-btn');
+    btn.textContent = '✅ Copied!';
+    setTimeout(() => btn.textContent = '📋 Copy Log', 1500);
+  });
+}
+
+// ── Progress ───────────────────────────────────────────────────────────────────
+function setProgress(perc, status) {
+  const fill = document.getElementById('progress-fill');
+  const lbl  = document.getElementById('progress-label');
+  fill.className = 'progress-fill';
+
+  if      (status === 'Done')    { fill.style.width = '100%'; fill.classList.add('done'); }
+  else if (status === 'Aborted') { fill.classList.add('red'); }
+  else if (perc === 0)           { fill.classList.add('pulse'); }
+  else                           { fill.style.width = perc + '%'; }
+
+  lbl.textContent = status;
+}
+
+// ── GPU Info ───────────────────────────────────────────────────────────────────
+async function loadGpuInfo() {
+  try {
+    const r = await fetch('/gpu');
+    const g = await r.json();
+    const badge = document.getElementById('gpu-badge');
+    const optLbl = document.getElementById('gpu-opt-label');
+    badge.style.display = 'inline';
+    if (g.available) {
+      badge.textContent = '🟢 ' + g.name;
+      badge.classList.add('active');
+      optLbl.textContent = g.name + ' (CUDA)';
+      optLbl.style.color = 'var(--green)';
+    } else {
+      badge.textContent = 'CPU-Modus';
+      optLbl.textContent = 'Kein GPU — CPU';
+    }
+  } catch {}
+}
+
+// ── SSE ────────────────────────────────────────────────────────────────────────
+function startLogStream() {
+  if (eventSource) eventSource.close();
+  eventSource = new EventSource('/logs');
+  eventSource.onmessage = e => logLine(e.data);
+  eventSource.onerror   = () => {};
+}
+function stopLogStream() {
+  if (eventSource) { eventSource.close(); eventSource = null; }
+}
+
+// ── Status Polling ─────────────────────────────────────────────────────────────
+function startPolling() {
+  if (pollInterval) clearInterval(pollInterval);
+  pollInterval = setInterval(async () => {
+    try {
+      const s = await (await fetch('/status')).json();
+      setProgress(s.progress, s.status);
+      if (s.report_url && s.report_url !== reportUrl) {
+        reportUrl = s.report_url;
+        document.getElementById('results-bar').classList.add('visible');
+        window.open(reportUrl, '_blank');
+      }
+      if (!s.running) {
+        clearInterval(pollInterval); pollInterval = null;
+        stopLogStream();
+        setButtons(false);
+      }
+    } catch {}
+  }, 500);
+}
+
+// ── Buttons ────────────────────────────────────────────────────────────────────
+function setButtons(running) {
+  document.getElementById('btn-start').disabled = running;
+  document.getElementById('btn-solo').disabled  = running;
+  document.getElementById('btn-stop').disabled  = !running;
+}
+
+// ── Start ──────────────────────────────────────────────────────────────────────
+async function startAnalysis(solo) {
+  const orig = document.getElementById('orig-path').value.trim();
+  const enco = document.getElementById('enco-path').value.trim();
+  if (!enco) { alert('Bitte Encoded-Pfad angeben.'); return; }
+  if (!solo && !orig) { alert('Bitte Original-Pfad angeben oder Solo-Scan nutzen.'); return; }
+
+  clearConsole();
+  document.getElementById('results-bar').classList.remove('visible');
+  reportUrl = null;
+  setButtons(true);
+  setProgress(0, 'Starting...');
+
+  const artFrames = parseInt(document.getElementById('art-frames').value) || 1000;
+
+  try {
+    const r = await fetch('/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        orig_path:  solo ? enco : orig,
+        enco_path:  enco,
+        metrics:    [...activeMetrics],
+        subsample:  parseInt(document.getElementById('subsample').value) || 1,
+        solo_mode:  solo,
+        offset_sec: 0.0,
+        dark_mode:  !document.body.classList.contains('light'),
+      }),
+    });
+    if (!r.ok) {
+      const e = await r.json();
+      alert('Fehler: ' + (e.error || r.statusText));
+      setButtons(false); return;
+    }
+    startLogStream();
+    startPolling();
+  } catch(e) {
+    alert('Verbindungsfehler: ' + e);
+    setButtons(false);
+  }
+}
+
+// ── Stop ───────────────────────────────────────────────────────────────────────
+async function stopAnalysis() {
+  await fetch('/stop', { method: 'POST' });
+}
+
+// ── Results ────────────────────────────────────────────────────────────────────
+function openReport()  { if (reportUrl) window.open(reportUrl, '_blank'); }
+function openGraph()   { window.open('/temp/graphs/vmaf_graph.png', '_blank'); }
+function openHeatmap() { window.open('/temp/heatmaps/heatmap_latest.png', '_blank'); }
+function openTab(url)  { window.open(url, '_blank'); }
+function closeFilesModal() {
+  document.getElementById('files-modal').classList.remove('open');
+}
+async function openScreenshots() {
+  const res = await fetch('/screenshots/list');
+  const data = await res.json();
+  const list = document.getElementById('files-modal-list');
+  document.getElementById('files-modal-title').textContent = 'SCREENSHOTS';
+  list.innerHTML = '';
+  if (!data.screenshots || data.screenshots.length === 0) {
+    list.innerHTML = '<div class="browser-item">Keine Screenshots vorhanden.</div>';
+  } else {
+    data.screenshots.forEach(f => {
+      const a = document.createElement('a');
+      a.href = f.url; a.target = '_blank';
+      a.className = 'browser-item file';
+      a.style.textDecoration = 'none';
+      a.innerHTML = '🖼 ' + f.name;
+      list.appendChild(a);
+    });
+  }
+  document.getElementById('files-modal').classList.add('open');
+}
+async function openHeatmapModal() {
+  const res = await fetch('/screenshots/list');
+  document.getElementById('files-modal-title').textContent = 'HEATMAP';
+  const list = document.getElementById('files-modal-list');
+  list.innerHTML = '';
+  const a = document.createElement('a');
+  a.href = '/temp/heatmaps/heatmap_latest.png'; a.target = '_blank';
+  a.className = 'browser-item file';
+  a.style.textDecoration = 'none';
+  a.innerHTML = '🔥 heatmap_latest.png';
+  list.appendChild(a);
+  document.getElementById('files-modal').classList.add('open');
+}
+function openLatestReport() {
+  if (reportUrl) {
+    window.open(reportUrl, '_blank');
+  } else {
+    alert('Kein Report vorhanden. Bitte zuerst eine Analyse starten.');
+  }
+}
+
+// ── artifact frames → web_app ──────────────────────────────────────────────────
+// Wir müssen den Wert beim Start mitsenden, also kein separater Endpoint nötig.
+// Der Wert wird direkt aus dem Input gelesen.
+
+// ── Player ─────────────────────────────────────────────────────────────────────
+let syncLock = false;
+
+function openPlayer(mode) {
+  const orig = document.getElementById('orig-path').value.trim();
+  const enco = document.getElementById('enco-path').value.trim();
+
+  if (mode === 'orig' && !orig) { alert('Bitte Original-Pfad angeben.'); return; }
+  if (mode === 'enco' && !enco) { alert('Bitte Encoded-Pfad angeben.'); return; }
+  if (mode === 'both' && (!orig || !enco)) { alert('Bitte beide Pfade angeben.'); return; }
+
+  const container = document.getElementById('player-videos');
+  const label     = document.getElementById('player-label');
+  const title     = document.getElementById('player-title');
+  const warn      = document.getElementById('player-unsupported');
+  container.innerHTML = '';
+  warn.style.display  = 'none';
+
+  function makeVideo(path, labelText) {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'display:flex;flex-direction:column;flex:1;gap:4px;';
+    const lbl = document.createElement('div');
+    lbl.style.cssText = 'font-size:10px;color:#888;text-align:center;padding:2px 0;';
+    lbl.textContent = labelText;
+    const vid = document.createElement('video');
+    vid.controls = true;
+    vid.style.cssText = 'flex:1;max-height:72vh;background:#000;border-radius:2px;width:100%;';
+    vid.src = '/stream?path=' + encodeURIComponent(path);
+    vid.addEventListener('error', () => { warn.style.display = 'block'; });
+    wrap.appendChild(lbl);
+    wrap.appendChild(vid);
+    return { wrap, vid };
+  }
+
+  if (mode === 'orig') {
+    title.textContent = 'PLAY REFERENCE';
+    const { wrap } = makeVideo(orig, orig.split('/').pop());
+    container.appendChild(wrap);
+    label.textContent = '';
+  } else if (mode === 'enco') {
+    title.textContent = 'PLAY ENCODED';
+    const { wrap } = makeVideo(enco, enco.split('/').pop());
+    container.appendChild(wrap);
+    label.textContent = '';
+  } else {
+    title.textContent = 'COMPARISON PLAYER';
+    const v1 = makeVideo(orig, '▶ REFERENCE — ' + orig.split('/').pop());
+    const v2 = makeVideo(enco, '▶ ENCODED — '   + enco.split('/').pop());
+    container.appendChild(v1.wrap);
+    container.appendChild(v2.wrap);
+
+    // Synchronisation
+    function sync(master, slave) {
+      if (syncLock) return;
+      syncLock = true;
+      if (Math.abs(master.currentTime - slave.currentTime) > 0.15)
+        slave.currentTime = master.currentTime;
+      syncLock = false;
+    }
+    v1.vid.addEventListener('timeupdate', () => sync(v1.vid, v2.vid));
+    v2.vid.addEventListener('timeupdate', () => sync(v2.vid, v1.vid));
+    v1.vid.addEventListener('play',  () => { syncLock=true; v2.vid.play();  syncLock=false; });
+    v1.vid.addEventListener('pause', () => { syncLock=true; v2.vid.pause(); syncLock=false; });
+    v2.vid.addEventListener('play',  () => { syncLock=true; v1.vid.play();  syncLock=false; });
+    v2.vid.addEventListener('pause', () => { syncLock=true; v1.vid.pause(); syncLock=false; });
+    label.textContent = 'Tipp: Beide Videos werden synchron abgespielt.';
+  }
+
+  document.getElementById('player-modal').classList.add('open');
+}
+
+function closePlayer() {
+  const container = document.getElementById('player-videos');
+  container.querySelectorAll('video').forEach(v => { v.pause(); v.src = ''; });
+  container.innerHTML = '';
+  document.getElementById('player-modal').classList.remove('open');
+}
+
+// ── File Browser ───────────────────────────────────────────────────────────────
+let browserTarget = null; // 'orig' oder 'enco'
+
+function openBrowser(target) {
+  browserTarget = target;
+  document.getElementById('browser-modal').classList.add('open');
+  loadDir('/data');
+}
+
+function closeBrowser() {
+  document.getElementById('browser-modal').classList.remove('open');
+}
+
+async function loadDir(path) {
+  document.getElementById('browser-path').textContent = path;
+  const list = document.getElementById('browser-list');
+  list.innerHTML = '<div style="padding:14px;color:var(--dim);font-size:12px;">Lade...</div>';
+
+  try {
+    const r = await fetch('/browse?path=' + encodeURIComponent(path));
+    const d = await r.json();
+    if (d.error) { list.innerHTML = `<div style="padding:14px;color:var(--red)">${d.error}</div>`; return; }
+
+    list.innerHTML = '';
+
+    // Zurück-Button
+    if (d.parent) {
+      const back = document.createElement('div');
+      back.className = 'browser-item dir';
+      back.innerHTML = '<span class="item-icon">⬆</span><span class="item-name">.. (zurück)</span>';
+      back.onclick = () => loadDir(d.parent);
+      list.appendChild(back);
+    }
+
+    if (d.entries.length === 0) {
+      list.innerHTML += '<div style="padding:14px;color:var(--dim);font-size:12px;">Keine Videos oder Ordner gefunden.</div>';
+    }
+
+    d.entries.forEach(e => {
+      const item = document.createElement('div');
+      item.className = 'browser-item ' + e.type;
+      if (e.type === 'dir') {
+        item.innerHTML = `<span class="item-icon">📁</span><span class="item-name">${e.name}</span>`;
+        item.onclick = () => loadDir(e.path);
+      } else {
+        item.innerHTML = `<span class="item-icon">🎬</span><span class="item-name">${e.name}</span><span class="item-size">${e.size}</span>`;
+        item.onclick = () => {
+          document.getElementById(browserTarget === 'orig' ? 'orig-path' : 'enco-path').value = e.path;
+          closeBrowser();
+        };
+      }
+      list.appendChild(item);
+    });
+  } catch(e) {
+    list.innerHTML = `<div style="padding:14px;color:var(--red)">Fehler: ${e}</div>`;
+  }
+}
+
+// Modal schließen mit Escape
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeBrowser(); closeSettings(); } });
+
+// ── Theme Toggle ───────────────────────────────────────────────────────────────
+function toggleTheme() {
+  const light = document.body.classList.toggle('light');
+  document.getElementById('theme-btn').textContent = light ? '🌙  DARK MODE' : '☀️ LIGHT MODE';
+  localStorage.setItem('theme', light ? 'light' : 'dark');
+}
+
+// ── Settings Modal ─────────────────────────────────────────────────────────────
+const ALL_METRICS_SETTINGS = ["VMAF","SSIM","PSNR","BITRATE","ARTIFACTS","FRAME DROPS","AUDIO"];
+let settingsMetrics = new Set(ALL_METRICS_SETTINGS);
+
+function buildSettingsMetrics() {
+  const row = document.getElementById('s-metrics-row');
+  row.innerHTML = '';
+  ALL_METRICS_SETTINGS.forEach(m => {
+    const badge = document.createElement('div');
+    badge.className = 'metric-badge' + (settingsMetrics.has(m) ? ' active' : '');
+    badge.innerHTML = `<span class="metric-dot" id="sdot-${m}">●</span><span class="metric-name">${m}</span>`;
+    badge.onclick = () => {
+      if (settingsMetrics.has(m)) settingsMetrics.delete(m); else settingsMetrics.add(m);
+      badge.classList.toggle('active');
+    };
+    row.appendChild(badge);
+  });
+}
+
+async function openSettings() {
+  try {
+    const r = await fetch('/api/settings');
+    const s = await r.json();
+    document.getElementById('s-path-from').value   = s.path_from          || '';
+    document.getElementById('s-path-to').value     = s.path_to            || '/data/';
+    document.getElementById('s-subsample').value   = s.default_subsample  || 1;
+    document.getElementById('s-art-frames').value  = s.default_art_frames || 1000;
+    document.getElementById('s-dark-mode').checked = s.default_dark_mode !== false;
+    settingsMetrics = new Set(s.default_metrics || ALL_METRICS_SETTINGS);
+  } catch(e) {
+    settingsMetrics = new Set(ALL_METRICS_SETTINGS);
+  }
+  buildSettingsMetrics();
+  document.getElementById('settings-modal').style.display = 'flex';
+}
+
+function closeSettings() {
+  document.getElementById('settings-modal').style.display = 'none';
+}
+
+async function saveSettings() {
+  const payload = {
+    path_from:          document.getElementById('s-path-from').value.trim(),
+    path_to:            document.getElementById('s-path-to').value.trim() || '/data/',
+    default_metrics:    [...settingsMetrics],
+    default_subsample:  parseInt(document.getElementById('s-subsample').value) || 1,
+    default_art_frames: parseInt(document.getElementById('s-art-frames').value) || 1000,
+    default_dark_mode:  document.getElementById('s-dark-mode').checked,
+  };
+  try {
+    const r = await fetch('/api/settings', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload),
+    });
+    if (r.ok) {
+      const msg = document.getElementById('s-save-msg');
+      msg.textContent = '✅ Gespeichert!';
+      msg.style.opacity = '1';
+      setTimeout(() => { msg.style.opacity = '0'; }, 2500);
+    }
+  } catch(e) {
+    alert('Fehler beim Speichern: ' + e);
+  }
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────────
+buildMetrics();
+loadGpuInfo();
+if (localStorage.getItem('theme') === 'light') toggleTheme();
+</script>
+</body>
+</html>

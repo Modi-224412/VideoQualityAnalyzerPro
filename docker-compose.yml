@@ -1,0 +1,26 @@
+services:
+  videoanalyzer:
+    image: ghcr.io/modi-224412/videoqualityanalyzer:latest
+    container_name: videoqualityanalyzer
+    ports:
+      - "2498:2498"
+    volumes:
+      # Reports persistent speichern
+      - ./reports:/app/reports
+      # Einstellungen persistent speichern (Pfad-Mapping, Queue-Defaults etc.)
+      - ./config.json:/app/config.json
+      # Dein Medienordner – Videos werden über diesen Pfad angegeben
+      # Beispiel Unraid:  /mnt/user/media:/data:ro
+      # Beispiel NAS:     /volume1/video:/data:ro
+      - /mnt/user/media:/data:ro
+    # ── NVIDIA GPU Support ────────────────────────────────────────────────────
+    # Voraussetzung: NVIDIA Container Toolkit / Unraid NVIDIA Plugin
+    # Ohne GPU: deploy-Block auskommentieren oder löschen
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped

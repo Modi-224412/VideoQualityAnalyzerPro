@@ -1,0 +1,25 @@
+services:
+  videoanalyzer:
+    image: ghcr.io/modi-224412/videoqualityanalyzer:latest
+    container_name: VideoQualityAnalyzerPro
+    ports:
+      - "2498:2498"
+    volumes:
+      # Reports – werden in den Appdata-Ordner gespeichert
+      - /mnt/user/appdata/VideoQualityAnalyzerPro/reports:/app/reports
+      # Einstellungen persistent speichern (Pfad-Mapping, Queue-Defaults etc.)
+      - /mnt/user/appdata/VideoQualityAnalyzerPro/config.json:/app/config.json
+      # Medienordner – hier deine Videos angeben (read-only)
+      - /mnt/user/downloads:/data:ro
+    environment:
+      - TZ=Europe/Berlin
+    # ── NVIDIA GPU (nur wenn Unraid NVIDIA Plugin installiert ist) ─────────────
+    # Ohne NVIDIA GPU: die deploy-Sektion komplett löschen
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped

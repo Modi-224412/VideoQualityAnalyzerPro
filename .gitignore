@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+
+# Virtuelle Umgebungen
+venv/
+.venv/
+env/
+
+# Build / Distribution
+build/
+dist/
+*.spec
+
+# Temporäre Analysedaten
+temp/
+reports/
+
+# Persönliche Konfiguration
+config.json
+
+# FFmpeg-Binaries (zu groß für Git)
+ffmpeg.exe
+ffplay.exe
+ffprobe.exe
+ffmpeg
+ffplay
+ffprobe
+
+# IDE
+.vscode/
+.idea/
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# macOS
+.DS_Store
+
+# Claude Code
+.claude/

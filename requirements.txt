@@ -1,0 +1,99 @@
+@echo off
+chcp 65001 >nul
+setlocal EnableDelayedExpansion
+
+echo ============================================
+echo   MKV Muxer - Encoded Video + Original MKV
+echo ============================================
+echo.
+
+:: ============================================
+:: EINSTELLUNGEN - Hier anpassen!
+:: ============================================
+
+:: Pfad zum encodierten Video von StaxRip (nur Video, kein Audio)
+set "ENCODED_VIDEO=encoded_video.mkv"
+
+:: Pfad zur Original-MKV (Audioquelle + Untertitel)
+set "SOURCE_MKV=Boruto.Naruto.Next.Generations.S01E033.German.DL.DTS.1080p.BluRay.x265-Modi.mkv"
+
+:: Ausgabedatei
+set "OUTPUT=Boruto.S01E033.HEVC.DTS-HD.mkv"
+
+:: Pfad zu mkvmerge (falls nicht im PATH)
+set "MKVMERGE=mkvmerge"
+
+:: ============================================
+:: DATEIEN PRÜFEN
+:: ============================================
+
+if not exist "%ENCODED_VIDEO%" (
+    echo [FEHLER] Encoded Video nicht gefunden: %ENCODED_VIDEO%
+    echo Bitte Dateinamen oben anpassen!
+    pause
+    exit /b 1
+)
+
+if not exist "%SOURCE_MKV%" (
+    echo [FEHLER] Quell-MKV nicht gefunden: %SOURCE_MKV%
+    echo Bitte Dateinamen oben anpassen!
+    pause
+    exit /b 1
+)
+
+echo [OK] Encoded Video gefunden: %ENCODED_VIDEO%
+echo [OK] Quell-MKV gefunden:     %SOURCE_MKV%
+echo.
+echo Starte Muxing...
+echo.
+
+:: ============================================
+:: MKVMERGE BEFEHL
+:: ============================================
+
+%MKVMERGE% -o "%OUTPUT%" ^
+  --no-audio --no-subtitles ^
+  --track-name 0:"HEVC" ^
+  "%ENCODED_VIDEO%" ^
+  --no-video ^
+  --audio-tracks 1,5 ^
+  --no-subtitles ^
+  --track-name 1:"German DTS-HD Surround 5.1" ^
+  --language 1:deu ^
+  --default-track 1:yes ^
+  --track-name 5:"Japanese DTS-HD" ^
+  --language 5:jpn ^
+  --default-track 5:no ^
+  --no-video ^
+  --no-audio ^
+  --subtitle-tracks 7,8 ^
+  --track-name 7:"German (Forced)" ^
+  --language 7:deu ^
+  --default-track 7:yes ^
+  --forced-display-flag 7:yes ^
+  --track-name 8:"GerSub" ^
+  --language 8:deu ^
+  --default-track 8:no ^
+  --forced-display-flag 8:no ^
+  "%SOURCE_MKV%"
+
+:: ============================================
+:: ERGEBNIS
+:: ============================================
+
+if %ERRORLEVEL% EQU 0 (
+    echo.
+    echo ============================================
+    echo   FERTIG! Ausgabe: %OUTPUT%
+    echo ============================================
+) else if %ERRORLEVEL% EQU 1 (
+    echo.
+    echo [WARNUNG] mkvmerge meldete Warnungen - Datei wurde trotzdem erstellt.
+    echo Ausgabe: %OUTPUT%
+) else (
+    echo.
+    echo [FEHLER] mkvmerge ist fehlgeschlagen! Exitcode: %ERRORLEVEL%
+)
+
+echo.
+pause
