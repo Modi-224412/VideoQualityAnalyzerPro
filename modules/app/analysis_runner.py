@@ -601,19 +601,24 @@ class AnalysisRunner:
 
     def _get_vmaf_stats(self, log_path):
         """Liest VMAF Durchschnitt und Minimum aus dem JSON-Log.
-        Frames mit Score <= 0.0 werden ignoriert (libvmaf Warmup-Artefakte)."""
+        Nutzt pooled_metrics.vmaf.min von libvmaf direkt – robuster als
+        Frame-by-Frame-Minimum, da libvmaf Warmup-Artefakte intern filtert."""
         try:
             with open(log_path, encoding='utf-8', errors='replace') as f:
                 data = json.load(f)
-            # Nur gültige Scores (> 0) – 0.0-Werte sind libvmaf Initialisierungsartefakte
-            scores = [
-                fr["metrics"]["vmaf"]
-                for fr in data.get("frames", [])
-                if fr.get("metrics", {}).get("vmaf") is not None
-                and fr["metrics"]["vmaf"] > 0.0
-            ]
-            avg_v = data.get("pooled_metrics", {}).get("vmaf", {}).get("mean", 0.0)
-            return avg_v, (min(scores) if scores else 0.0)
+            pooled = data.get("pooled_metrics", {}).get("vmaf", {})
+            avg_v  = pooled.get("mean", 0.0)
+            min_v  = pooled.get("min")
+            if min_v is None:
+                # Fallback für ältere libvmaf-Versionen ohne pooled_metrics
+                scores = [
+                    fr["metrics"]["vmaf"]
+                    for fr in data.get("frames", [])
+                    if fr.get("metrics", {}).get("vmaf") is not None
+                    and fr["metrics"]["vmaf"] > 2.0
+                ]
+                min_v = min(scores) if scores else 0.0
+            return avg_v, min_v
         except (OSError, json.JSONDecodeError, KeyError, ValueError, TypeError):
             return 0.0, 0.0
 

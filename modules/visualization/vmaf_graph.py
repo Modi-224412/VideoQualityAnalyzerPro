@@ -38,15 +38,16 @@ def create_vmaf_graph(log_path=None, dark_mode=False):
             print("VMAF Graph: Keine Frame-Daten im Log.")
             return ""
 
-        # Scores einlesen – ungültige Werte (None, <= 0.0) werden als NaN gesetzt
+        # Scores einlesen – ungültige Werte (None, < 2.0) werden als NaN gesetzt
         # damit sie im Graph als Lücke erscheinen statt als falsche Ausreißer nach unten.
-        # Ursache: libvmaf hat einen Warmup-Effekt der erste Frames mit Score 0.0 liefert.
+        # Ursache: libvmaf hat einen Warmup-Effekt der erste Frames mit Scores nahe 0
+        # liefert (z.B. 0.02). Schwellwert 2.0 schließt diese Artefakte sicher aus.
         frame_numbers = []
         vmaf_scores   = []
         for i, f in enumerate(frames):
             score = f.get("metrics", {}).get("vmaf")
             frame_numbers.append(f.get("frameNum", i))
-            vmaf_scores.append(float('nan') if (score is None or score <= 0.0) else score)
+            vmaf_scores.append(float('nan') if (score is None or score < 2.0) else score)
 
         valid_scores = [s for s in vmaf_scores if s == s]  # NaN-frei (NaN != NaN)
         if not valid_scores:
