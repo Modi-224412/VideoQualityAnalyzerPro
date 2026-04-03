@@ -136,6 +136,7 @@ Browser öffnen: **`http://NAS-IP:2498`**
 ### Web-Features
 
 - Vollständige Analyse-Oberfläche im Browser
+- **Mehrfachanalyse (Batch-Modus):** Jobs anlegen, per Batch-Import paaren und sequenziell abarbeiten lassen
 - Server-seitiger Datei-Browser für Video-Auswahl
 - Live-Konsole mit Echtzeit-Logs
 - Integrierter Video-Player (Einzel & synchroner Vergleich)
@@ -173,6 +174,8 @@ Interaktive Dokumentation ist automatisch verfügbar:
 
 #### Endpunkte
 
+**Einzelanalyse**
+
 | Methode | Pfad | Beschreibung |
 |---|---|---|
 | `POST` | `/api/start` | Analyse starten |
@@ -183,6 +186,19 @@ Interaktive Dokumentation ist automatisch verfügbar:
 | `GET` | `/api/screenshots/list` | Screenshots auflisten |
 | `GET` | `/api/heatmaps/list` | Heatmaps auflisten |
 | `GET` | `/api/gpu` | GPU-Info |
+
+**Mehrfachanalyse (Queue)**
+
+| Methode | Pfad | Beschreibung |
+|---|---|---|
+| `POST` | `/api/queue/add` | Job zur Queue hinzufügen |
+| `GET` | `/api/queue` | Alle Jobs anzeigen (inkl. Status & Ergebnisse) |
+| `POST` | `/api/queue/start` | Queue starten |
+| `POST` | `/api/queue/stop` | Queue stoppen & laufenden Job abbrechen |
+| `POST` | `/api/queue/reorder` | Reihenfolge der wartenden Jobs ändern |
+| `DELETE` | `/api/queue/{id}` | Wartenden Job entfernen |
+| `DELETE` | `/api/queue` | Abgeschlossene Jobs löschen |
+| `GET` | `/api/queue/{id}/results` | Ergebnisse eines einzelnen Jobs abrufen |
 
 #### Beispiel: Analyse per curl starten
 
