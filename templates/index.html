@@ -454,6 +454,7 @@
       justify-content: center;
     }
     .modal-overlay.open { display: flex; }
+    #browser-modal { z-index: 200; } /* immer über anderen Modals */
     .modal {
       background: var(--card);
       border: 1px solid var(--border);
@@ -863,6 +864,11 @@
     <div class="modal-header">
       <span class="modal-title">DATEI AUSWÄHLEN</span>
       <button class="btn btn-secondary" onclick="closeBrowser()">✕ Schließen</button>
+    </div>
+    <!-- Batch-Modus Leiste (nur sichtbar wenn mehrere Dateien ausgewählt werden) -->
+    <div id="browser-batch-bar" style="display:none;padding:6px 14px;background:var(--green);color:#fff;font-size:11px;align-items:center;gap:8px;flex-shrink:0;">
+      <span id="browser-batch-count">0 Dateien ausgewählt</span>
+      <button onclick="closeBatchBrowser()" style="margin-left:auto;background:rgba(255,255,255,0.25);color:#fff;border:none;padding:3px 10px;font-size:10px;font-weight:700;cursor:pointer;border-radius:1px;">✓ Fertig</button>
     </div>
     <div class="modal-path" id="browser-path">/data</div>
     <div class="modal-list" id="browser-list"></div>
@@ -1399,6 +1405,10 @@ function openBrowser(target) {
 
 function closeBrowser() {
   document.getElementById('browser-modal').classList.remove('open');
+  if (batchBrowserSide) {
+    batchBrowserSide = null;
+    document.getElementById('browser-batch-bar').style.display = 'none';
+  }
 }
 
 async function loadDir(path) {
@@ -1435,7 +1445,16 @@ async function loadDir(path) {
       } else {
         item.innerHTML = `<span class="item-icon">🎬</span><span class="item-name">${e.name}</span><span class="item-size">${e.size}</span>`;
         item.onclick = () => {
-          if (browserCallback) {
+          if (batchBrowserSide) {
+            // Batch-Modus: Datei zur Liste hinzufügen, Browser offen lassen
+            if (batchBrowserSide === 'enco') { bdEncoFiles.push(e.path); bdEncoFiles.sort(); }
+            else                             { bdOrigFiles.push(e.path); bdOrigFiles.sort(); }
+            renderBdLists();
+            _updateBatchBar();
+            // Visuelles Feedback: Item kurz grün markieren
+            item.style.background = 'rgba(46,204,113,0.25)';
+            setTimeout(() => { item.style.background = ''; }, 600);
+          } else if (browserCallback) {
             const cb = browserCallback;
             browserCallback = null;
             closeBrowser();
@@ -1847,14 +1866,28 @@ function bdToggleSolo() {
   renderBdLists();
 }
 
+let batchBrowserSide = null; // 'enco' | 'orig' | null
+
 function bdAddFile(side) {
-  browserCallback = path => {
-    if (side === 'enco') { bdEncoFiles.push(path); bdEncoFiles.sort(); }
-    else                 { bdOrigFiles.push(path); bdOrigFiles.sort(); }
-    renderBdLists();
-  };
+  batchBrowserSide = side;
+  browserCallback  = null;
+  const bar = document.getElementById('browser-batch-bar');
+  bar.style.display = 'flex';
+  _updateBatchBar();
   document.getElementById('browser-modal').classList.add('open');
   loadDir('/data');
+}
+
+function _updateBatchBar() {
+  const count = batchBrowserSide === 'enco' ? bdEncoFiles.length : bdOrigFiles.length;
+  document.getElementById('browser-batch-count').textContent =
+    `${count} Datei${count !== 1 ? 'en' : ''} ausgewählt – weitere anklicken oder ✓ Fertig`;
+}
+
+function closeBatchBrowser() {
+  batchBrowserSide = null;
+  document.getElementById('browser-batch-bar').style.display = 'none';
+  closeBrowser();
 }
 
 function bdRemoveSelected(side) {
