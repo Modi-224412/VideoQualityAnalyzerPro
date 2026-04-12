@@ -1727,7 +1727,12 @@ async function queueRemoveJob() {
   try {
     const r = await fetch('/api/queue/' + selectedJobId, { method: 'DELETE' });
     if (!r.ok) { alert((await r.json()).error || 'Fehler beim Entfernen.'); return; }
-    selectedJobId = null;
+    // Nächsten Job vorauswählen: gleicher Index, sonst letzter
+    const idx = queueJobs.findIndex(j => j.id === selectedJobId);
+    const remaining = queueJobs.filter(j => j.id !== selectedJobId);
+    selectedJobId = remaining.length
+      ? (remaining[idx] ?? remaining[remaining.length - 1]).id
+      : null;
     refreshQueueList();
   } catch(e) { alert('Fehler: ' + e); }
 }
