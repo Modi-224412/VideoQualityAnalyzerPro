@@ -11,6 +11,10 @@ services:
       - /mnt/user/appdata/VideoQualityAnalyzerPro/config.json:/app/config.json
       # Medienordner – hier deine Videos angeben (read-only)
       - /mnt/user/downloads:/data:ro
+    # ── StaxRip Integration (optional) ────────────────────────────────────────
+    # Pipeline-Ordner einmalig auf dem NAS anlegen:
+    #   mkdir -p /mnt/user/downloads/Pruefung/Bearbeitung
+    #   mkdir -p /mnt/user/downloads/Pruefung/Fertig
     environment:
       - TZ=Europe/Berlin
     # ── NVIDIA GPU (nur wenn Unraid NVIDIA Plugin installiert ist) ─────────────
