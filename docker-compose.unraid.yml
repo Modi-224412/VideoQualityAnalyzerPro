@@ -19,12 +19,12 @@ services:
     environment:
       - TZ=Europe/Berlin
     # ── NVIDIA GPU (nur wenn Unraid NVIDIA Plugin installiert ist) ─────────────
-    # Ohne NVIDIA GPU: die deploy-Sektion komplett löschen
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
+    # Ohne NVIDIA GPU: die deploy-Sektion auskommentiert lassen
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
     restart: unless-stopped
