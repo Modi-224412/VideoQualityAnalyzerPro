@@ -591,8 +591,14 @@ class VideoAnalyzerApp:
             return
         if self._queue_running:
             return
+        self._cancel_reset_timer()
         self._queue_running = True
         self._queue_stop_event.clear()
+        self.root.after(0, lambda: (
+            self.progress.stop(),
+            self.progress.config(mode='determinate', style="Green.Horizontal.TProgressbar"),
+            self.progress_label.config(text="Mehrfachanalyse wird gestartet…", fg="#aaa")
+        ))
         self._update_button_states()
         threading.Thread(target=self._queue_process, daemon=True).start()
 
@@ -638,8 +644,6 @@ class VideoAnalyzerApp:
             def _done(j=job, ev=job_done):
                 j.status = "done"
                 ev.set()
-                if orig_on_done:
-                    orig_on_done()
 
             def _abort(j=job, ev=job_done):
                 j.status = "error"
@@ -667,6 +671,9 @@ class VideoAnalyzerApp:
             )
 
             job_done.wait()  # Warten bis Job fertig oder abgebrochen
+            # Race Condition vermeiden: warten bis analysis_running = False gesetzt ist
+            while self.runner.is_running():
+                time.sleep(0.01)
             self.root.after(0, self._queue_refresh_list)
 
             if self._queue_stop_event.is_set():
