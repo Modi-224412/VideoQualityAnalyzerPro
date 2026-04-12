@@ -7,10 +7,15 @@ services:
     volumes:
       # Reports – werden in den Appdata-Ordner gespeichert
       - /mnt/user/appdata/VideoQualityAnalyzerPro/reports:/app/reports
-      # Einstellungen persistent speichern (Pfad-Mapping, Queue-Defaults etc.)
-      - /mnt/user/appdata/VideoQualityAnalyzerPro/config.json:/app/config.json
+      # Einstellungen & Queue persistent (config.json + queue.json werden beim Start automatisch angelegt)
+      - /mnt/user/appdata/VideoQualityAnalyzerPro:/app/persistent
       # Medienordner – hier deine Videos angeben (read-only)
       - /mnt/user/downloads:/data:ro
+    command: >
+      sh -c "mkdir -p /app/persistent &&
+             [ -f /app/persistent/config.json ] || echo '{}' > /app/persistent/config.json &&
+             [ -f /app/persistent/queue.json ]  || echo '{}' > /app/persistent/queue.json &&
+             exec python3 web_app.py"
     # ── StaxRip Integration (optional) ────────────────────────────────────────
     # Pipeline-Ordner einmalig auf dem NAS anlegen:
     #   mkdir -p /mnt/user/downloads/Pruefung/Bearbeitung

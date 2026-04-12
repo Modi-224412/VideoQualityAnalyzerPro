@@ -151,6 +151,36 @@ _q_done_event.set()                   # Initial: kein Job läuft
 _q_paused:  bool          = True      # Queue startet pausiert – expliziter Start nötig
 _q_pause_event            = threading.Event()  # gesetzt = läuft, leer = pausiert
 
+# Persistenz-Verzeichnis: /app/persistent (Docker) oder APP_PATH (lokal)
+_PERSISTENT_DIR = "/app/persistent" if os.path.isdir("/app/persistent") else APP_PATH
+QUEUE_FILE = os.path.join(_PERSISTENT_DIR, "queue.json")
+
+
+def _save_queue():
+    """Speichert die aktuelle Queue in queue.json (persistent über Neustarts)."""
+    try:
+        with open(QUEUE_FILE, "w", encoding="utf-8") as f:
+            json.dump({"counter": _q_counter, "jobs": _q_jobs}, f, indent=2)
+    except Exception:
+        pass
+
+
+def _load_queue():
+    """Lädt die Queue aus queue.json beim Start. Unterbrochene Jobs → zurück auf waiting."""
+    global _q_jobs, _q_counter
+    try:
+        with open(QUEUE_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        _q_counter = data.get("counter", 0)
+        jobs = data.get("jobs", [])
+        for j in jobs:
+            if j["status"] == "running":
+                j["status"]     = "waiting"
+                j["started_at"] = None
+        _q_jobs = jobs
+    except (FileNotFoundError, json.JSONDecodeError):
+        pass
+
 
 def _next_qid() -> int:
     global _q_counter
@@ -192,6 +222,7 @@ def _queue_worker():
         _q_done_event.clear()
         next_job["status"]     = "running"
         next_job["started_at"] = datetime.now().isoformat(timespec="seconds")
+        _save_queue()
 
         # Globalen Job-State zurücksetzen (Web-UI zeigt Fortschritt)
         job.update({
@@ -211,6 +242,7 @@ def _queue_worker():
             _qj["results"]     = job.get("results")
             _qj["report_url"]  = job.get("report_url")
             job.update({"running": False, "status": "Done", "progress": 100.0})
+            _save_queue()
             _q_done_event.set()
 
         def _q_failed(_qj=next_job):
@@ -218,6 +250,7 @@ def _queue_worker():
             _qj["finished_at"] = datetime.now().isoformat(timespec="seconds")
             job.update({"running": False, "aborted": True,
                         "status": "Aborted", "progress": 0.0})
+            _save_queue()
             _q_done_event.set()
 
         cbs["on_done"]         = _q_done
@@ -241,6 +274,7 @@ def _queue_worker():
             next_job["status"]      = "failed"
             next_job["error"]       = str(e)
             next_job["finished_at"] = datetime.now().isoformat(timespec="seconds")
+            _save_queue()
             _q_done_event.set()
 
         # Auf Abschluss warten, dann nächsten Job
@@ -249,6 +283,7 @@ def _queue_worker():
 
 
 # Worker-Thread starten
+_load_queue()  # Queue aus queue.json wiederherstellen (persistente Jobs)
 _worker_thread = threading.Thread(target=_queue_worker, daemon=True, name="QueueWorker")
 _worker_thread.start()
 
@@ -299,7 +334,7 @@ def _make_callbacks(art_frames: int = 1000) -> dict:
     }
 
 # ── Config / Queue-Settings ───────────────────────────────────────────────────
-_config_mgr = ConfigManager(os.path.join(APP_PATH, "config.json"))
+_config_mgr = ConfigManager(os.path.join(_PERSISTENT_DIR, "config.json"))
 
 _QUEUE_SETTINGS_DEFAULTS = {
     "path_from":          "",
@@ -773,6 +808,7 @@ async def api_queue_add(req: StartRequest):
             "report_url":  None,
             "error":       None,
         })
+    _save_queue()
     return {"id": jid, "status": "waiting", "position": waiting_count + 1}
 
 
@@ -844,6 +880,7 @@ async def api_queue_remove(job_id: int):
         if match["status"] != "waiting":
             return JSONResponse({"error": f"Job {job_id} hat status '{match['status']}' und kann nicht entfernt werden"}, status_code=409)
         _q_jobs.remove(match)
+    _save_queue()
     return {"status": "removed", "id": job_id}
 
 
@@ -855,6 +892,7 @@ async def api_queue_clear():
         before = len(_q_jobs)
         _q_jobs[:] = [j for j in _q_jobs if j["status"] in ("waiting", "running")]
         cleared = before - len(_q_jobs)
+    _save_queue()
     return {"cleared": cleared}
 
 
@@ -899,6 +937,7 @@ async def api_queue_reorder(req: ReorderRequest):
             if j["id"] not in listed_ids:
                 reordered.append(j)
         _q_jobs[:] = others + reordered
+    _save_queue()
     return {"status": "reordered"}
 
 

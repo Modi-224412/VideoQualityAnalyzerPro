@@ -121,17 +121,14 @@ mkdir -p /mnt/user/appdata/VideoQualityAnalyzerPro
 wget https://raw.githubusercontent.com/Modi-224412/VideoQualityAnalyzerPro/main/docker-compose.unraid.yml \
   -O /mnt/user/appdata/VideoQualityAnalyzerPro/docker-compose.yml
 
-# Config-Datei einmalig anlegen (wichtig – sonst wird sie als Verzeichnis gemountet!)
-echo '{}' > /mnt/user/appdata/VideoQualityAnalyzerPro/config.json
-
-# Starten
+# Starten – config.json und queue.json werden beim ersten Start automatisch angelegt
 cd /mnt/user/appdata/VideoQualityAnalyzerPro
 docker compose up -d
 ```
 
 Browser öffnen: **`http://NAS-IP:2498`**
 
-> **Hinweis:** Die `config.json` muss vor dem ersten Start manuell angelegt werden. Sie speichert deine Einstellungen (Pfad-Mapping, Queue-Defaults) dauerhaft — auch nach Container-Updates.
+> **Hinweis:** `config.json` und `queue.json` werden beim ersten Start automatisch unter `/mnt/user/appdata/VideoQualityAnalyzerPro/` angelegt. Kein manueller Schritt nötig.
 
 ### Web-Features
 
