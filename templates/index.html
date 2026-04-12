@@ -1665,6 +1665,13 @@ function startQueuePolling() {
   if (queuePollInt) return;
   queuePollInt = setInterval(async () => {
     await refreshQueueList();
+
+    // Fortschrittsbalken aktualisieren (wie bei Einzelanalyse)
+    try {
+      const s = await (await fetch('/status')).json();
+      setProgress(s.progress, s.status);
+    } catch {}
+
     const anyActive = queueJobs.some(j => j.status === 'running' || j.status === 'waiting');
     const paused    = !queueJobs.some(j => j.status === 'running');
     if (!anyActive || (paused && !queueJobs.some(j => j.status === 'running'))) {
