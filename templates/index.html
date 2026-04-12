@@ -1651,6 +1651,8 @@ async function queueStart() {
   }
   try {
     await fetch('/api/queue/start', { method: 'POST' });
+    reportUrl = null;
+    document.getElementById('results-bar').classList.remove('visible');
     setQueueButtons(true);
     startLogStream();
     startQueuePolling();
@@ -1666,10 +1668,15 @@ function startQueuePolling() {
   queuePollInt = setInterval(async () => {
     await refreshQueueList();
 
-    // Fortschrittsbalken aktualisieren (wie bei Einzelanalyse)
+    // Fortschrittsbalken aktualisieren + Report auto-öffnen (wie bei Einzelanalyse)
     try {
       const s = await (await fetch('/status')).json();
       setProgress(s.progress, s.status);
+      if (s.report_url && s.report_url !== reportUrl) {
+        reportUrl = s.report_url;
+        document.getElementById('results-bar').classList.add('visible');
+        window.open(reportUrl, '_blank');
+      }
     } catch {}
 
     const anyActive = queueJobs.some(j => j.status === 'running' || j.status === 'waiting');
