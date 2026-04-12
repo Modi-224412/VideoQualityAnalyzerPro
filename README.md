@@ -266,6 +266,9 @@ VideoQualityAnalyzerPro/
 ├── templates/index.html         # Web-UI
 ├── config.json                  # Einstellungen
 ├── requirements.txt
+├── staxrip/                     # StaxRip Integration Scripts
+│   ├── vqa_submit.ps1           # Nach Encode aufrufen – Job einstellen & Datei verschieben
+│   └── vqa_watcher.ps1          # Hintergrund-Watcher – Ergebnis in CSV + Toast-Notification
 └── modules/
     ├── analysis/                # VMAF, SSIM, PSNR, Audio, HDR, Szenen, Frame Drops
     ├── artifact_detection/      # Artefakt-Erkennung
@@ -276,6 +279,71 @@ VideoQualityAnalyzerPro/
     ├── ui/                      # Theme, UI-Builder, Console (Desktop)
     ├── visualization/           # VMAF-Graph, Artefakt-Heatmap
     └── path_utils.py            # Plattformübergreifende Pfad-Auflösung
+```
+
+---
+
+## StaxRip Integration
+
+Die Scripts im Ordner `staxrip/` ermöglichen eine automatische Qualitätsprüfung nach jedem Encode direkt aus StaxRip heraus.
+
+### Funktionsweise
+
+```
+StaxRip encodiert → vqa_submit.ps1 läuft → Datei → Bearbeitung\
+                                          → Job an API gesendet
+                                          → vqa_watcher.ps1 startet im Hintergrund
+                                                    ↓
+                                          Analyse läuft auf dem NAS
+                                                    ↓
+                                          Datei → Fertig\
+                                          Ergebnis in vqa_ergebnisse.csv
+                                          Windows Toast-Benachrichtigung
+```
+
+### Ordnerstruktur auf dem NAS
+
+```
+downloads/
+└── Pruefung/
+    ├── Bearbeitung/    ← Datei wird hierher verschoben während Analyse läuft
+    ├── Fertig/         ← Datei landet hier nach abgeschlossener Analyse
+    └── vqa_ergebnisse.csv  ← Alle Ergebnisse gesammelt (öffenbar in Excel)
+```
+
+Ordner auf dem NAS anlegen:
+```bash
+mkdir -p /mnt/user/downloads/Pruefung/Bearbeitung
+mkdir -p /mnt/user/downloads/Pruefung/Fertig
+```
+
+### Scripts einrichten (Windows)
+
+1. `staxrip/vqa_submit.ps1` und `staxrip/vqa_watcher.ps1` nach `C:\Scripts\` kopieren
+2. In `vqa_submit.ps1` die NAS-IP eintragen:
+```powershell
+$ApiUrl  = "https://NAS-IP:443"
+$BaseDir = "Z:\downloads\Pruefung"
+```
+3. Pfad-Mapping in der Web-UI einstellen (`⚙️ Einstellungen`):
+   - Windows-Pfad (von): `Z:\downloads\`
+   - Docker-Pfad (nach): `/data/`
+
+### StaxRip konfigurieren
+
+In StaxRip unter **Tools → Settings → Events → After Encoding**:
+
+```
+powershell.exe -ExecutionPolicy Bypass -File "C:\Scripts\vqa_submit.ps1" -Original "%source_file%" -Encoded "%target_file%"
+```
+
+### CSV-Ergebnisse
+
+Nach jeder abgeschlossenen Analyse wird `Z:\downloads\Pruefung\vqa_ergebnisse.csv` automatisch ergänzt:
+
+```
+Datum,Dateiname,VMAF_Avg,VMAF_Min,SSIM,PSNR,Report
+2026-04-12 14:23,film1.mp4,94.2,81.5,0.98421,42.3,https://NAS-IP/reports/...
 ```
 
 ---
