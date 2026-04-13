@@ -299,7 +299,8 @@ class AnalysisRunner:
             vmaf_avg, vmaf_min = 0.0, 0.0
             if run_vmaf and os.path.exists(abs_log_json):
                 vmaf_avg, vmaf_min = self._get_vmaf_stats(abs_log_json)
-                create_vmaf_graph(log_path=abs_log_json, dark_mode=dark_mode)
+                create_vmaf_graph(log_path=abs_log_json, dark_mode=dark_mode,
+                                  fps=self._get_fps(enco))
 
             # 10. HTML Report
             rep = generate_full_report(
@@ -754,3 +755,18 @@ class AnalysisRunner:
                 pass
         console.print_warning("Videodauer nicht ermittelbar.")
         return 0
+
+    def _get_fps(self, path):
+        """Liest die Framerate des ersten Video-Streams via ffprobe."""
+        data = self._ffprobe_json(path, show_streams=True)
+        for stream in data.get("streams", []):
+            if stream.get("codec_type") == "video":
+                r = stream.get("r_frame_rate", "")
+                try:
+                    num, den = r.split("/")
+                    fps = float(num) / float(den)
+                    if fps > 0:
+                        return fps
+                except (ValueError, ZeroDivisionError):
+                    pass
+        return None
