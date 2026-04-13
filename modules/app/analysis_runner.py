@@ -210,7 +210,9 @@ class AnalysisRunner:
 
             # 4. Heatmap (nur wenn VMAF aktiv und Log vorhanden)
             if run_vmaf and os.path.exists(abs_log_json):
-                ArtifactHeatmapGenerator(self.ffmpeg_path).generate(abs_log_json)
+                ArtifactHeatmapGenerator(self.ffmpeg_path).generate(
+                    abs_log_json, dark_mode=dark_mode, fps=self._get_fps(enco)
+                )
 
             with self._lock:
                 if not self.analysis_running:
