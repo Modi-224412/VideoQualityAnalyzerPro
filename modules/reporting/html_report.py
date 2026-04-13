@@ -1,11 +1,25 @@
 import os
+import base64
 import datetime
 from modules.path_utils import APP_PATH
+
+def _embed_img(abs_path):
+    """Liest eine Bilddatei und gibt einen Base64-Data-URI zurück.
+    Fällt auf leeren String zurück wenn die Datei nicht existiert."""
+    try:
+        with open(abs_path, "rb") as f:
+            data = base64.b64encode(f.read()).decode("ascii")
+        ext = os.path.splitext(abs_path)[1].lower().lstrip(".")
+        mime = {"jpg": "jpeg", "jpeg": "jpeg", "png": "png"}.get(ext, "png")
+        return f"data:image/{mime};base64,{data}"
+    except Exception:
+        return ""
 
 def generate_full_report(vmaf_log, bitrate_res, artifact_res, video_path, ssim, psnr,
                           vmaf_avg, vmaf_min, worst_scenes, hdr_info,
                           frame_drop_res=None, audio_res=None,
-                          dark_mode=False, active_metrics=None, solo_mode=False):
+                          dark_mode=False, active_metrics=None, solo_mode=False,
+                          vmaf_p5=None):
     """
     Generiert einen HTML-Qualitätsbericht.
     - FIX: APP_PATH statt dirname(dirname(dirname())) – Report landet neben der EXE
@@ -73,19 +87,13 @@ def generate_full_report(vmaf_log, bitrate_res, artifact_res, video_path, ssim, 
             f'</div></div>'
         )
 
-    # Relative Pfade: funktionieren in EXE (file://) und Web (http://)
-    # Report liegt in reports/, Bilder in temp/ → ../temp/...
-    def _abs_img(rel_path):
-        abs_path = os.path.abspath(rel_path).replace("\\", "/")
-        return f"file:///{abs_path}"
+    def _temp_img(subpath):
+        """Liest Bild aus temp/ und gibt Base64-Data-URI zurück."""
+        return _embed_img(os.path.join(base_dir, "temp", subpath))
 
-    def _web_img(subpath):
-        """Relativer Pfad vom Report-Ordner zu temp/"""
-        return f"../temp/{subpath}"
-
-    # Bildpfade
-    graph_abs   = _web_img("graphs/vmaf_graph.png")
-    heatmap_abs = _web_img("heatmaps/heatmap_latest.png")
+    # Bildpfade (Base64-eingebettet – funktionieren offline, in EXE und Web)
+    graph_abs   = _temp_img("graphs/vmaf_graph.png")
+    heatmap_abs = _temp_img("heatmaps/heatmap_latest.png")
 
     # --- Szenen-Karten ---
     scenes_html = ""
@@ -100,7 +108,7 @@ def generate_full_report(vmaf_log, bitrate_res, artifact_res, video_path, ssim, 
             ts_format = f"{int(raw_sec // 60):02d}:{int(raw_sec % 60):02d}"
             vmaf_val  = scene.get('vmaf', 0)
             img_name  = scene.get('screenshot', f"worst_scene_{i+1}.jpg")
-            img_abs   = _web_img(f"screenshots/{img_name}")
+            img_abs   = _temp_img(f"screenshots/{img_name}")
 
             scenes_html += f"""
             <div class="scene-card" style="background:{box_bg}; border:1px solid {border_color};">
@@ -1158,6 +1166,11 @@ def generate_full_report(vmaf_log, bitrate_res, artifact_res, video_path, ssim, 
             <span class="label">Minimum VMAF</span>
             {"<span class='vmaf-main' style='font-size:36px; color:" + vmaf_color(vmaf_min) + ";'>" + f"{vmaf_min:.2f}" + "</span>"
               if "VMAF" in active_metrics else _skipped("VMAF")}
+        </div>
+        <div class="metric-card">
+            <span class="label">VMAF P5 <span style="font-size:11px;color:#888;">(schlechteste 5%)</span></span>
+            {"<span class='vmaf-main' style='font-size:36px; color:" + vmaf_color(vmaf_p5 or 0) + ";'>" + f"{vmaf_p5:.2f}" + "</span>"
+              if ("VMAF" in active_metrics and vmaf_p5 is not None) else _skipped("VMAF P5")}
         </div>
         <div class="metric-card">
             <span class="label">SSIM (Struktur)</span>

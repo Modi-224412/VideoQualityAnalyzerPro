@@ -66,6 +66,9 @@ class VideoAnalyzerApp:
         self.ffmpeg_path = get_tool("ffmpeg")
         self.ffplay_path = get_tool("ffplay")
 
+        # --- FFmpeg libvmaf Check ---
+        self.root.after(500, self._check_ffmpeg_vmaf)
+
         self.dirs = {
             "reports":     os.path.join(app_path, "reports"),
             "temp":        os.path.join(app_path, "temp"),
@@ -150,6 +153,27 @@ class VideoAnalyzerApp:
     # ─────────────────────────────────────────
     # METRIK TOGGLE
     # ─────────────────────────────────────────
+
+    def _check_ffmpeg_vmaf(self):
+        """Prüft ob das gefundene FFmpeg libvmaf unterstützt. Zeigt Warnung wenn nicht."""
+        import subprocess
+        try:
+            result = subprocess.run(
+                [self.ffmpeg_path, "-filters"],
+                capture_output=True, text=True, timeout=10
+            )
+            if "libvmaf" not in result.stdout:
+                messagebox.showwarning(
+                    "FFmpeg ohne libvmaf",
+                    "Das gefundene FFmpeg unterstützt kein libvmaf.\n\n"
+                    "VMAF, SSIM und PSNR werden nicht funktionieren.\n\n"
+                    "Lösung (im Projektordner ausführen):\n"
+                    "  pip install static-ffmpeg\n"
+                    "  python3 get_ffmpeg.py\n"
+                    "  chmod +x ffmpeg ffprobe"
+                )
+        except Exception:
+            pass
 
     def toggle_metric(self, metric):
         """Schaltet eine Metrik an/aus und aktualisiert Badge-Farbe."""

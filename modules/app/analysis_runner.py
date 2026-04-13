@@ -298,9 +298,9 @@ class AnalysisRunner:
                 final_worst = self._extract_worst_scenes(abs_log_json, enco)
 
             # 9. VMAF Graph + Stats
-            vmaf_avg, vmaf_min = 0.0, 0.0
+            vmaf_avg, vmaf_min, vmaf_p5 = 0.0, 0.0, 0.0
             if run_vmaf and os.path.exists(abs_log_json):
-                vmaf_avg, vmaf_min = self._get_vmaf_stats(abs_log_json)
+                vmaf_avg, vmaf_min, vmaf_p5 = self._get_vmaf_stats(abs_log_json)
                 create_vmaf_graph(log_path=abs_log_json, dark_mode=dark_mode,
                                   fps=self._get_fps(enco))
 
@@ -312,7 +312,8 @@ class AnalysisRunner:
                 frame_drop_res = frame_drop_res,
                 audio_res      = audio_res,
                 dark_mode      = dark_mode,
-                active_metrics = self.active_metrics
+                active_metrics = self.active_metrics,
+                vmaf_p5        = vmaf_p5,
             )
 
             if rep:
@@ -356,6 +357,12 @@ class AnalysisRunner:
             console.print_step("STARTING SOLO SCAN (REFERENZLOS)")
             active = self.active_metrics & SOLO_METRICS
             console.print_info(f"Aktive Metriken: {', '.join(sorted(active))}")
+            skipped = {"VMAF", "SSIM", "PSNR"} & self.active_metrics
+            if skipped:
+                console.print_warning(
+                    f"{', '.join(sorted(skipped))} übersprungen – "
+                    "diese Metriken benötigen ein Referenzvideo und sind im Solo-Modus nicht verfügbar."
+                )
 
             # HDR-Info (für Report-Badge)
             hdr_info = HDRChecker().analyze(enco, self.ffmpeg_path)
@@ -603,27 +610,35 @@ class AnalysisRunner:
         return final_worst
 
     def _get_vmaf_stats(self, log_path):
-        """Liest VMAF Durchschnitt und Minimum aus dem JSON-Log.
-        Nutzt pooled_metrics.vmaf.min von libvmaf direkt – robuster als
-        Frame-by-Frame-Minimum, da libvmaf Warmup-Artefakte intern filtert."""
+        """Liest VMAF Durchschnitt, Minimum und P5-Perzentil aus dem JSON-Log."""
         try:
             with open(log_path, encoding='utf-8', errors='replace') as f:
                 data = json.load(f)
             pooled = data.get("pooled_metrics", {}).get("vmaf", {})
             avg_v  = pooled.get("mean", 0.0)
             min_v  = pooled.get("min")
+
+            # Frame-Scores für P5 und Fallback-Minimum
+            scores = sorted([
+                fr["metrics"]["vmaf"]
+                for fr in data.get("frames", [])
+                if fr.get("metrics", {}).get("vmaf") is not None
+                and fr["metrics"]["vmaf"] > 2.0
+            ])
+
             if min_v is None:
-                # Fallback für ältere libvmaf-Versionen ohne pooled_metrics
-                scores = [
-                    fr["metrics"]["vmaf"]
-                    for fr in data.get("frames", [])
-                    if fr.get("metrics", {}).get("vmaf") is not None
-                    and fr["metrics"]["vmaf"] > 2.0
-                ]
-                min_v = min(scores) if scores else 0.0
-            return avg_v, min_v
+                min_v = scores[0] if scores else 0.0
+
+            # P5: 5. Perzentil (schlechteste 5% der Frames)
+            if scores:
+                p5_idx = max(0, int(len(scores) * 0.05) - 1)
+                p5_v   = scores[p5_idx]
+            else:
+                p5_v = 0.0
+
+            return avg_v, min_v, p5_v
         except (OSError, json.JSONDecodeError, KeyError, ValueError, TypeError):
-            return 0.0, 0.0
+            return 0.0, 0.0, 0.0
 
     def _detect_audio_offset(self, orig_path, enco_path):
         """
