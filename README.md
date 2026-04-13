@@ -29,8 +29,9 @@ Verfügbar als **Desktop-App** (Windows/Linux) und als **Web-Version** für NAS/
   - GPU-Auswahl direkt im Mehrfachanalyse-Tab, auf alle Jobs anwendbar
 - Integrierter Video-Player mit synchronem Vergleich
 - HTML-Report Export (Dark & Light Mode)
-- VMAF-Graph als PNG
-- Artefakt-Heatmap
+- VMAF-Graph als PNG (Qualitätszonen, Durchschnitts- & Min-Linie, Zeitachse)
+- Artefakt-Heatmap (Zeitachse, Max-Markierung, Threshold-Linie, Dark/Light Mode)
+- **Queue-Persistenz:** Jobs bleiben nach Container-/App-Neustart erhalten
 - Dark/Light Mode
 - GPU-Beschleunigung (NVIDIA CUDA)
 - Mobil-optimiertes Layout (Web-Version)
@@ -55,22 +56,14 @@ pip install -r requirements.txt
 
 **Linux:**
 
-Erstelle eine Hilfsdatei `get_ffmpeg.py` im Projektordner:
-```python
-import static_ffmpeg, subprocess, shutil
-static_ffmpeg.add_paths()
-ff = subprocess.run(['which', 'ffmpeg'], capture_output=True, text=True).stdout.strip()
-fp = subprocess.run(['which', 'ffprobe'], capture_output=True, text=True).stdout.strip()
-shutil.copy(ff, 'ffmpeg')
-shutil.copy(fp, 'ffprobe')
-print('Fertig:', ff)
-```
-
-Dann ausführen:
 ```bash
 pip install --break-system-packages static-ffmpeg
 python3 get_ffmpeg.py
 chmod +x ffmpeg ffprobe
+```
+
+Die Datei `get_ffmpeg.py` liegt bereits im Projektordner und kann danach gelöscht werden:
+```bash
 rm get_ffmpeg.py
 ```
 
@@ -134,6 +127,7 @@ Browser öffnen: **`http://NAS-IP:2498`**
 
 - Vollständige Analyse-Oberfläche im Browser
 - **Mehrfachanalyse (Batch-Modus):** Jobs anlegen, per Batch-Import paaren und sequenziell abarbeiten lassen
+- **Queue-Persistenz:** Jobs bleiben nach Container-Neustart erhalten (gespeichert in `queue.json`)
 - Server-seitiger Datei-Browser für Video-Auswahl
 - Live-Konsole mit Echtzeit-Logs
 - Integrierter Video-Player (Einzel & synchroner Vergleich)
