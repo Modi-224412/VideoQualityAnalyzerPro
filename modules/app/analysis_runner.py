@@ -629,15 +629,16 @@ class AnalysisRunner:
                 and fr["metrics"]["vmaf"] > 2.0
             ])
 
-            if min_v is None:
-                min_v = scores[0] if scores else 0.0
-
-            # P5: 5. Perzentil (schlechteste 5% der Frames)
+            # P1 als robustes Minimum (überspringt schwarze Frames / Ausreißer)
+            # P5: schlechteste 5% der Frames
             if scores:
+                p1_idx = max(0, int(len(scores) * 0.01) - 1)
                 p5_idx = max(0, int(len(scores) * 0.05) - 1)
+                min_v  = scores[p1_idx]   # robuster als absolutes Minimum
                 p5_v   = scores[p5_idx]
             else:
-                p5_v = 0.0
+                min_v = 0.0
+                p5_v  = 0.0
 
             return avg_v, min_v, p5_v
         except (OSError, json.JSONDecodeError, KeyError, ValueError, TypeError):

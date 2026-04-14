@@ -1163,7 +1163,7 @@ def generate_full_report(vmaf_log, bitrate_res, artifact_res, video_path, ssim, 
               if "VMAF" in active_metrics else _skipped("VMAF")}
         </div>
         <div class="metric-card">
-            <span class="label">Minimum VMAF</span>
+            <span class="label">Minimum VMAF <span style="font-size:11px;color:#888;">(P1)</span></span>
             {"<span class='vmaf-main' style='font-size:36px; color:" + vmaf_color(vmaf_min) + ";'>" + f"{vmaf_min:.2f}" + "</span>"
               if "VMAF" in active_metrics else _skipped("VMAF")}
         </div>
