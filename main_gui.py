@@ -734,6 +734,44 @@ class VideoAnalyzerApp:
         if f:
             entry.delete(0, tk.END)
             entry.insert(0, os.path.normpath(f))
+            # Subsampling-Vorschlag nur beim Encoded-Video
+            if entry is self.encoded:
+                self._suggest_subsampling(f)
+
+    def _suggest_subsampling(self, video_path):
+        """Schlägt einen Subsampling-Wert basierend auf der Videolänge vor."""
+        try:
+            import subprocess
+            result = subprocess.run(
+                [self.ffmpeg_path, "-v", "quiet", "-print_format", "json",
+                 "-show_format", video_path],
+                capture_output=True, text=True, timeout=10
+            )
+            import json as _json
+            dur = float(_json.loads(result.stdout).get("format", {}).get("duration", 0))
+        except Exception:
+            return
+
+        if dur <= 0:
+            return
+
+        minutes = dur / 60
+        if minutes < 5:
+            suggested = "1"
+        elif minutes < 20:
+            suggested = "2"
+        elif minutes < 60:
+            suggested = "4"
+        else:
+            suggested = "8"
+
+        current = self.subsample_var.get()
+        if current != suggested:
+            self.subsample_var.set(suggested)
+            console.print_info(
+                f"Subsampling automatisch auf {suggested} gesetzt "
+                f"(Videolänge: {int(minutes)}:{int((minutes % 1) * 60):02d} min)."
+            )
 
     def open_dir(self, key):
         path = self.dirs.get(key)

@@ -619,10 +619,13 @@ class AnalysisRunner:
             min_v  = pooled.get("min")
 
             # Frame-Scores für P5 und Fallback-Minimum
+            # Ersten 30 Frames überspringen (libvmaf Warmup-Artefakt, konsistent mit SceneAnalyzer)
+            WARMUP_SKIP = 30
             scores = sorted([
                 fr["metrics"]["vmaf"]
-                for fr in data.get("frames", [])
-                if fr.get("metrics", {}).get("vmaf") is not None
+                for i, fr in enumerate(data.get("frames", []))
+                if i >= WARMUP_SKIP
+                and fr.get("metrics", {}).get("vmaf") is not None
                 and fr["metrics"]["vmaf"] > 2.0
             ])
 

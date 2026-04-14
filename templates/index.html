@@ -726,7 +726,7 @@
     <div class="card">
       <div class="card-title">Quick Access</div>
       <div class="access-row">
-        <button class="btn btn-secondary" onclick="openLatestReport()">📂 Reports</button>
+        <button class="btn btn-secondary" onclick="openReportArchive()">📂 Reports</button>
         <button class="btn btn-secondary" onclick="openScreenshots()">📸 Screenshots</button>
         <button class="btn btn-secondary" onclick="openHeatmapModal()">🔥 Heatmaps</button>
       </div>
@@ -854,6 +854,12 @@
     <div class="modal-header">
       <span class="modal-title" id="files-modal-title">DATEIEN</span>
       <button class="btn btn-secondary" onclick="closeFilesModal()">✕ Schließen</button>
+    </div>
+    <div id="files-modal-search-wrap" style="display:none;padding:8px 16px 4px;">
+      <input id="files-modal-search" type="text" placeholder="Suchen…"
+             oninput="filterReportList(this.value)"
+             style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--border);
+                    background:var(--bg);color:var(--text);font-size:13px;">
     </div>
     <div class="modal-list" id="files-modal-list"></div>
   </div>
@@ -1276,6 +1282,7 @@ async function openScreenshots() {
   const data = await res.json();
   const list = document.getElementById('files-modal-list');
   document.getElementById('files-modal-title').textContent = 'SCREENSHOTS';
+  document.getElementById('files-modal-search-wrap').style.display = 'none';
   list.innerHTML = '';
   if (!data.screenshots || data.screenshots.length === 0) {
     list.innerHTML = '<div class="browser-item">Keine Screenshots vorhanden.</div>';
@@ -1294,6 +1301,7 @@ async function openScreenshots() {
 async function openHeatmapModal() {
   const res = await fetch('/screenshots/list');
   document.getElementById('files-modal-title').textContent = 'HEATMAP';
+  document.getElementById('files-modal-search-wrap').style.display = 'none';
   const list = document.getElementById('files-modal-list');
   list.innerHTML = '';
   const a = document.createElement('a');
@@ -1303,6 +1311,48 @@ async function openHeatmapModal() {
   a.innerHTML = '🔥 heatmap_latest.png';
   list.appendChild(a);
   document.getElementById('files-modal').classList.add('open');
+}
+let _allReports = [];
+async function openReportArchive() {
+  document.getElementById('files-modal-title').textContent = 'REPORT ARCHIV';
+  document.getElementById('files-modal-search-wrap').style.display = 'block';
+  document.getElementById('files-modal-search').value = '';
+  const list = document.getElementById('files-modal-list');
+  list.innerHTML = '<div style="padding:20px;color:var(--dim);text-align:center;">Lädt…</div>';
+  document.getElementById('files-modal').classList.add('open');
+  try {
+    const data = await (await fetch('/api/reports/list')).json();
+    _allReports = (data.reports || []).sort((a, b) => b.name.localeCompare(a.name));
+    _renderReportList(_allReports);
+  } catch {
+    list.innerHTML = '<div style="padding:20px;color:#e74c3c;">Fehler beim Laden der Reports.</div>';
+  }
+}
+function _renderReportList(reports) {
+  const list = document.getElementById('files-modal-list');
+  list.innerHTML = '';
+  if (!reports.length) {
+    list.innerHTML = '<div style="padding:20px;color:var(--dim);text-align:center;">Keine Reports vorhanden.</div>';
+    return;
+  }
+  reports.forEach(r => {
+    // Datum aus Dateiname parsen: Report_YYYYMMDD_HHMMSS.html
+    let label = r.name;
+    const m = r.name.match(/Report_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})/);
+    if (m) label = `${m[3]}.${m[2]}.${m[1]}  ${m[4]}:${m[5]}:${m[6]}`;
+    const a = document.createElement('a');
+    a.href = r.url; a.target = '_blank';
+    a.className = 'browser-item file';
+    a.style.textDecoration = 'none';
+    a.style.display = 'flex';
+    a.style.justifyContent = 'space-between';
+    a.innerHTML = `<span>📊 ${label}</span><span style="font-size:11px;color:var(--dim);">${r.name}</span>`;
+    list.appendChild(a);
+  });
+}
+function filterReportList(query) {
+  const q = query.toLowerCase();
+  _renderReportList(_allReports.filter(r => r.name.toLowerCase().includes(q)));
 }
 function openLatestReport() {
   if (reportUrl) {

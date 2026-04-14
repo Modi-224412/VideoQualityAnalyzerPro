@@ -42,12 +42,17 @@ def create_vmaf_graph(log_path=None, dark_mode=False, fps=None):
         if fps is None:
             fps = data.get("fps") or data.get("pooled_metrics", {}).get("fps")
 
+        # Ersten 30 Frames überspringen (libvmaf Warmup-Artefakt)
+        WARMUP_SKIP = 30
         frame_numbers = []
         vmaf_scores   = []
         for i, f in enumerate(frames):
             score = f.get("metrics", {}).get("vmaf")
             frame_numbers.append(f.get("frameNum", i))
-            vmaf_scores.append(float('nan') if (score is None or score < 2.0) else score)
+            if i < WARMUP_SKIP or score is None or score < 2.0:
+                vmaf_scores.append(float('nan'))
+            else:
+                vmaf_scores.append(score)
 
         valid_scores = [s for s in vmaf_scores if s == s]
         if not valid_scores:
